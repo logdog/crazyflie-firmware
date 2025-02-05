@@ -46,6 +46,10 @@
 #ifdef CONFIG_PLATFORM_FLAPPER
     #include "platform_defaults_flapper.h"
 #endif
+#ifdef CONFIG_PLATFORM_BICOPTER
+    #include "platform_defaults_bolt.h"
+    #include "platform_defaults_bicopter.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform

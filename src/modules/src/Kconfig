@@ -196,7 +196,11 @@ config POWER_DISTRIBUTION_FLAPPER
     depends on PLATFORM_FLAPPER
     help
         Power distribution function for Flapper Nimble+
-
+config POWER_DISTRIBUTION_BICOPTER
+    bool "Bicopter power distribution"
+    depends on PLATFORM_BICOPTER
+    help
+        Power distribution function for Bicopter
 endchoice
 config POWER_DISTRIBUTION_FLAPPER_REVB
     bool "Flapper  Nimble+ power distribution (PCB revision B)"
