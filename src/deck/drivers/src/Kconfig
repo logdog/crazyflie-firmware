@@ -161,6 +161,12 @@ config DECK_FLAPPER
     help
         Enables Flapper Nimble+ PCB with current measurements via ADC on PA2/TX2 and external receiver.
 
+config DECK_BICOPTER
+    bool "Enable Bicopter Deck Servo Controls"
+    default n
+    help
+        Enables bicopter to turn the servos on PA2 and PA3.
+
 config DECK_FLAPPER_MEASURE_VBAT_ON_PA3
     bool "Measure VBAT on PA3"
     default n

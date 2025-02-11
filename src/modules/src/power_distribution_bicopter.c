@@ -24,6 +24,7 @@
 #include "config.h"
 #include "math.h"
 #include "platform_defaults.h"
+#include "bicopterdeck.h"
 
 #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0)) && defined(CONFIG_MOTORS_DEFAULT_IDLE_THRUST) && (CONFIG_MOTORS_DEFAULT_IDLE_THRUST > 0)
 #error "CONFIG_MOTORS_REQUIRE_ARMING must be defined and not set to 0 if CONFIG_MOTORS_DEFAULT_IDLE_THRUST is greater than 0"
@@ -86,10 +87,16 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
     //   motorThrustUncapped->motors.m2 = control->thrust - r - p - control->yaw;
     //   motorThrustUncapped->motors.m3 = control->thrust + r - p + control->yaw;
     //   motorThrustUncapped->motors.m4 = control->thrust + r + p - control->yaw;
-    motorThrustUncapped->motors.m1 = control->thrust;
-    motorThrustUncapped->motors.m2 = control->thrust;
+    // motorThrustUncapped->motors.m1 = control->thrust;
+    // motorThrustUncapped->motors.m2 = control->thrust;
+
+    // DSHOT
     motorThrustUncapped->motors.m3 = control->thrust;
     motorThrustUncapped->motors.m4 = control->thrust;
+
+    // SERVOS
+    s_servo1_angle = (uint8_t)(90 + 90*(control->thrust));
+    s_servo2_angle = (uint8_t)(90 + 90*(control->thrust));
 
     // DEBUG_PRINT("c: %f", (double)control->thrust);
 }

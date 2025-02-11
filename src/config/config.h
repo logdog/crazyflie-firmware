@@ -94,6 +94,7 @@
 #define ERROR_UKF_TASK_PRI        2
 #define LEDSEQCMD_TASK_PRI        1
 #define FLAPPERDECK_TASK_PRI      2
+#define BICOPTERDECK_TASK_PRI     2
 #define SYSLINK_TASK_PRI          3
 #define USBLINK_TASK_PRI          3
 #define ACTIVE_MARKER_TASK_PRI    3
@@ -160,6 +161,7 @@
 #define CPX_TASK_NAME             "CPX"
 #define APP_TASK_NAME             "APP"
 #define FLAPPERDECK_TASK_NAME     "FLAPPERDECK"
+#define BICOPTERDECK_TASK_NAME    "BICOPTERDECK"
 
 
 //Task stack sizes
@@ -206,6 +208,7 @@
 #define OA_DECK_TASK_STACKSIZE          (2 * configMINIMAL_STACK_SIZE)
 #define KALMAN_TASK_STACKSIZE           (3 * configMINIMAL_STACK_SIZE)
 #define FLAPPERDECK_TASK_STACKSIZE      (2 * configMINIMAL_STACK_SIZE)
+#define BICOPTERDECK_TASK_STACKSIZE      (2 * configMINIMAL_STACK_SIZE)
 #define ERROR_UKF_TASK_STACKSIZE        (4 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
