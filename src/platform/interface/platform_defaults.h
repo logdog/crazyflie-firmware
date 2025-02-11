@@ -47,7 +47,6 @@
     #include "platform_defaults_flapper.h"
 #endif
 #ifdef CONFIG_PLATFORM_BICOPTER
-    #include "platform_defaults_bolt.h"
     #include "platform_defaults_bicopter.h"
 #endif
 

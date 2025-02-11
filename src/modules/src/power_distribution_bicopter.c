@@ -86,9 +86,9 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
     //   motorThrustUncapped->motors.m2 = control->thrust - r - p - control->yaw;
     //   motorThrustUncapped->motors.m3 = control->thrust + r - p + control->yaw;
     //   motorThrustUncapped->motors.m4 = control->thrust + r + p - control->yaw;
-    motorThrustUncapped->motors.m1 = 0;
+    motorThrustUncapped->motors.m1 = control->thrust;
     motorThrustUncapped->motors.m2 = control->thrust;
-    motorThrustUncapped->motors.m3 = 0;
+    motorThrustUncapped->motors.m3 = control->thrust;
     motorThrustUncapped->motors.m4 = control->thrust;
 
     // DEBUG_PRINT("c: %f", (double)control->thrust);
