@@ -56,6 +56,12 @@ const MotorPerifDef** motorMap;  /* Current map configuration */
 
 const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
+// @logdog: group the motors by whether their output is DSHOT or PWM
+static inline uint8_t is_dshot(uint32_t id)
+{
+    return (id == MOTOR_M3) || (id == MOTOR_M4);
+}
+
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
 const MotorHealthTestDef brushedMotorHealthTestSettings = {
@@ -210,6 +216,8 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   motorMap = motorMapSelect;
 
   DEBUG_PRINT("Using %s motor driver\n", motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless");
+  // @logdog: add print statement to ensure we are using the correct motor driver
+  DEBUG_PRINT("M3 and M4 are configured to use DSHOT, but M1 and M2 are for servos.\n");
 
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
@@ -381,16 +389,20 @@ static void motorsDshotDMASetup()
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
-    DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[i]->DMA_PerifAddr;
-    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[i];
-    DMA_InitStructureShare.DMA_Channel = motorMap[i]->DMA_Channel;
-    DMA_Init(motorMap[i]->DMA_stream, &DMA_InitStructureShare);
 
-    NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+    // only set up the DMA if the motor is dshot (M1, M4 are dshot)
+    if (is_dshot(i)) {
+      DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[i]->DMA_PerifAddr;
+      DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[i];
+      DMA_InitStructureShare.DMA_Channel = motorMap[i]->DMA_Channel;
+      DMA_Init(motorMap[i]->DMA_stream, &DMA_InitStructureShare);
+
+      NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
+      NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
+      NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+      NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+      NVIC_Init(&NVIC_InitStructure);
+    }
   }
 }
 static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
@@ -445,15 +457,15 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
  */
 void motorsBurstDshot()
 {
-
-    motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
-    motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    // @logdog: only configure DMA for M3 and M4
+    // motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    // motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M1*/
-    TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
-    DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
-    DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
+    // TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
+    // DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
+    // DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
-    DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
+    // DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
 
     motorMap[2]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M3*/
@@ -496,7 +508,14 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     {
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
       // Prepare DSHOT, firing it will be done synchronously with motorsBurstDshot.
-      motorsPrepareDshot(id, ratio);
+
+      // @logdog: only prepare DSHOT for select motors
+      if (is_dshot(id)) {
+        motorsPrepareDshot(id, ratio);
+      }
+      else {
+        motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio)); // TODO: is there a mapping for servos?
+      }
 #else
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
 #endif
@@ -677,22 +696,23 @@ void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
 }
-void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
-{
-  TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
-  DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
-  /* Enable TIM DMA Requests M2*/
-  TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
-  /* Enable DMA TIM Stream */
-  DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
-}
-void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
-{
-  TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
-  DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
-}
+// @logdog: disable M1 and M2 from DSHOT
+// void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
+// {
+//   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
+//   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
+//   DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
+//   /* Enable TIM DMA Requests M2*/
+//   TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
+//   /* Enable DMA TIM Stream */
+//   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
+// }
+// void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
+// {
+//   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
+//   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
+//   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
+// }
 #endif
 
 
