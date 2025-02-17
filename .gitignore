@@ -48,3 +48,8 @@ build/
 *.elf
 
 tools/dependency/web/data.js
+
+#logdog
+.gitignore
+Doxyfile
+FreeRTOS
