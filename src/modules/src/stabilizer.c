@@ -302,6 +302,8 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
+  int32_t count = 0;
+
   systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
@@ -348,9 +350,19 @@ static void stabilizerTask(void* param)
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
       if (areMotorsAllowedToRun) {
+
+        control.thrustSi = (count/5000) * 0.05;
+
+        if (control.thrustSi > 0.51f) {
+          control.thrustSi = 0.0f;
+        }
+
         controlMotors(&control);
+        count++;
+
       } else {
         motorsStop();
+        count = 0;
       }
 
       // Compute compressed log formats
