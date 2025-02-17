@@ -23,8 +23,8 @@
 // Defines for default values in the bolt platform
 
 // Default values for battery limits
-#define DEFAULT_BAT_LOW_VOLTAGE                   12.8f   // Bicopter Specific 4S-Lipo
-#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          12.0f   // Bicopter Specific 4S-Lipo
+#define DEFAULT_BAT_LOW_VOLTAGE                   13.4f   // Bicopter Specific 4S-Lipo
+#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          12.8f   // Bicopter Specific 4S-Lipo
 
 // the remainder of the file is unchanged from the bolt defaults
 
