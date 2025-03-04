@@ -351,7 +351,7 @@ static void stabilizerTask(void* param)
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
       if (areMotorsAllowedToRun) {
 
-        control.thrustSi = (count/5000) * 0.05;
+        control.thrustSi = 0.35 + (count/5000) * 0.05;
 
         if (control.thrustSi > 0.51f) {
           control.thrustSi = 0.0f;

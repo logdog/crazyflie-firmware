@@ -95,8 +95,8 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
     motorThrustUncapped->motors.m4 = control->thrust;
 
     // SERVOS
-    s_servo1_angle = (uint8_t)(90 + 90*(control->thrust));
-    s_servo2_angle = (uint8_t)(90 + 90*(control->thrust));
+    // s_servo1_angle = 90*control->thrust;
+    // s_servo2_angle = 90*control->thrust;
 
     // DEBUG_PRINT("c: %f", (double)control->thrust);
 }

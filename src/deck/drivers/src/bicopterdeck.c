@@ -47,8 +47,11 @@ static uint8_t servo1_idle = 90;
 static uint8_t servo2_idle = 90;
 static uint8_t servo_range = 180; // in degrees
 
-uint8_t s_servo1_angle = 90;
-uint8_t s_servo2_angle = 90;
+static int16_t right_servo_trim = 0;
+static int16_t left_servo_trim = 0;
+
+double s_servo1_angle = 0;
+double s_servo2_angle = 0;
 
 void servo1MapInit(const MotorPerifDef* servoMapSelect)
 {
@@ -162,8 +165,7 @@ void servoInit()
     servo1MapInit(servoMapIO1);
     DEBUG_PRINT("Init on IO1 [OK]\n");
     
-    servo1SetAngle(saturateAngle(servo1_idle));
-    // s_servo1_angle = servo1_idle;
+    servo1SetAngle(0);
     isInit1 = true;
   }
 
@@ -172,8 +174,7 @@ void servoInit()
     servo2MapInit(servoMapIO2);
     DEBUG_PRINT("Init on IO2 [OK]\n");
     
-    servo2SetAngle(saturateAngle(servo2_idle));
-    // s_servo2_angle = servo2_idle;
+    servo2SetAngle(0);
     isInit2 = true;
   }
 
@@ -190,8 +191,8 @@ void bicopterDeckTask(void* arg)
   while (1) {
     vTaskDelayUntil(&xLastWakeTime, M2T(20)); // 20 ms = 50 Hz
 
-    servo1SetAngle(saturateAngle(s_servo1_angle));
-    servo2SetAngle(saturateAngle(s_servo2_angle));
+    servo1SetAngle(s_servo1_angle);
+    servo2SetAngle(s_servo2_angle);
   }
 }
 
@@ -200,14 +201,14 @@ bool servoTest(void)
   return isInit1 && isInit2;
 }
 
-void servo1SetAngle(uint8_t angle)
+void servo1SetAngle(double angle)
 {
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = (double)(angle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
+  double pulse_length_us = (angle+servo1_idle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
   double pulse_length_s = pulse_length_us / 1000000;
-  const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ);
+  const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + left_servo_trim);
   servo1Map->setCompare(servo1Map->tim, ccr_val);
   
   #ifdef DEBUG_SERVO
@@ -215,14 +216,14 @@ void servo1SetAngle(uint8_t angle)
   #endif
 }
 
-void servo2SetAngle(uint8_t angle)
+void servo2SetAngle(double angle)
 {
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = (double)(angle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
+  double pulse_length_us = (angle+servo2_idle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
   double pulse_length_s = pulse_length_us / 1000000;
-  const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ);
+  const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + right_servo_trim);
   servo2Map->setCompare(servo2Map->tim, ccr_val);
   
   #ifdef DEBUG_SERVO
@@ -230,19 +231,6 @@ void servo2SetAngle(uint8_t angle)
   #endif
 }
 
-uint8_t saturateAngle(uint8_t angle)
-{
-  if (angle > servo_range) {
-    return servo_range;
-  }
-  else if (angle < 0) {
-    return 0;
-  }
-  else {
-    return angle;
-  }
-
-}
 
 static const DeckDriver bicopter_deck = {
   .vid = 0x00,
@@ -259,10 +247,21 @@ static const DeckDriver bicopter_deck = {
 DECK_DRIVER(bicopter_deck);
 
 
-// PARAM_GROUP_START(deck)
+/**
+ * [bideck] Bicopter deck parameters
+ */
+PARAM_GROUP_START(bideck)
 
-// PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcServo, &isInit)
-// PARAM_GROUP_STOP(deck)
+/**
+ * @brief offset the PWM signal for the left servo from 1500 to 1500+left_servo_trim
+ */
+PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, left_servo_trim, &left_servo_trim)
+
+/**
+ * @brief offset the PWM signal for the right servo from 1500 to 1500+right_servo_trim
+ */
+PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, right_servo_trim, &right_servo_trim)
+PARAM_GROUP_STOP(bideck)
 
 // /**
 //  * "Servo" deck parameters
@@ -284,7 +283,6 @@ DECK_DRIVER(bicopter_deck);
 // /**
 //  * @brief Servo idle (startup) angular position (in degrees, min = 0, max = servoRange)
 //  */
-// PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servoIdle, &servo_idle)
 // /**
 //  * @brief Servo angular position (in degrees, min = 0, max = servoRange)
 //  */

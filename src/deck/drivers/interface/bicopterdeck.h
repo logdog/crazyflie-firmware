@@ -22,8 +22,8 @@
 #define SERVO_PWM_FREQUENCY_HZ   50 // target servo pwm frequency
 #define SERVO_PWM_PRESCALE       (uint16_t) (1680) // 84mhz / (50hz * ARR)
 
-extern uint8_t s_servo1_angle;
-extern uint8_t s_servo2_angle;
+extern double s_servo1_angle;
+extern double s_servo2_angle;
 
 /**
  * Servo Initialization
@@ -37,20 +37,15 @@ bool servoTest(void);
  * @brief Set servo angle.
  * @param: angle: desired servo angle in degrees
  */
-void servo1SetAngle(uint8_t angle);
+void servo1SetAngle(double angle);
 
 /**
  *
  * @brief Set servo angle.
  * @param: angle: desired servo angle in degrees
  */
-void servo2SetAngle(uint8_t angle);
+void servo2SetAngle(double angle);
 
-/**
- * Saturate servo angle. Min is 0, max is defined by parameter 'servoRange'
- * @param angle: pointer to desired angle
- * */
-uint8_t saturateAngle(uint8_t angle);
 
 void bicopterDeckTask(void* arg);
 
