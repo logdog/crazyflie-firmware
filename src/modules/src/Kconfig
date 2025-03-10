@@ -47,6 +47,11 @@ config CONTROLLER_LEE
     help
         Use the Lee controller as default
 
+config CONTROLLER_PASSTHROUGH
+    bool "Passthrough controller"
+    help
+        Use the Passthrough controller as default
+
 endchoice
 
 config CONTROLLER_OOT

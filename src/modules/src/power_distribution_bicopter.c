@@ -91,8 +91,13 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
     // motorThrustUncapped->motors.m2 = control->thrust;
 
     // DSHOT
-    motorThrustUncapped->motors.m3 = control->thrust;
-    motorThrustUncapped->motors.m4 = control->thrust;
+    motorThrustUncapped->motors.m3 = control->thrust * UINT16_MAX;
+    motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX;
+    motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX;
+    motorThrustUncapped->motors.m2 = control->thrust * UINT16_MAX;
+
+    s_servo1_angle = control->pitch;
+    s_servo2_angle = control->roll;
 
     // SERVOS
     // s_servo1_angle = 90*control->thrust;
@@ -138,11 +143,11 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
     // cappedThrust *= 0.10f;
     // int32_t thrust = cappedThrust * UINT16_MAX;
 
-    int32_t thrust = control->thrustSi * UINT16_MAX;
-    motorThrustUncapped->motors.m1 = thrust;
-    motorThrustUncapped->motors.m2 = thrust;
-    motorThrustUncapped->motors.m3 = thrust;
-    motorThrustUncapped->motors.m4 = thrust;
+    // int32_t thrust = control->thrustSi * UINT16_MAX;
+    // motorThrustUncapped->motors.m1 = thrust;
+    // motorThrustUncapped->motors.m2 = thrust;
+    // motorThrustUncapped->motors.m3 = thrust;
+    // motorThrustUncapped->motors.m4 = thrust;
 }
 
 static void powerDistributionForce(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
