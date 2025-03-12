@@ -9,6 +9,7 @@
 #include "controller_brescianini.h"
 #include "controller_lee.h"
 #include "controller_passthrough.h"
+#include "controller_lqr.h"
 
 #include "autoconf.h"
 
@@ -33,6 +34,9 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerLeeFirmwareInit, .test = controllerLeeFirmwareTest, .update = controllerLeeFirmware, .name = "Lee"},
   #ifdef CONFIG_CONTROLLER_PASSTHROUGH
   {.init = controllerPassthroughInit, .test = controllerPassthroughTest, .update = controllerPassthrough, .name = "Passthrough"},
+  #endif
+  #ifdef CONFIG_CONTROLLER_LQR
+  {.init = controllerLQRInit, .test = controllerLQRTest, .update = controllerLQR, .name = "LQR"},
   #endif
   #ifdef CONFIG_CONTROLLER_OOT
   {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
@@ -63,6 +67,8 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeLee
   #elif defined(CONFIG_CONTROLLER_PASSTHROUGH)
     #define CONTROLLER ControllerTypePassthrough
+  #elif defined(CONFIG_CONTROLLER_LQR)
+    #define CONTROLLER ControllerTypeLQR
   #elif defined(CONFIG_CONTROLLER_OOT)
     #define CONTROLLER ControllerTypeOot
   #else

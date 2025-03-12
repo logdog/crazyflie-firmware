@@ -38,6 +38,9 @@ typedef enum {
 #ifdef CONFIG_CONTROLLER_PASSTHROUGH
   ControllerTypePassthrough,
 #endif
+#ifdef CONFIG_CONTROLLER_LQR
+  ControllerTypeLQR,
+#endif
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif

@@ -52,6 +52,11 @@ config CONTROLLER_PASSTHROUGH
     help
         Use the Passthrough controller as default
 
+config CONTROLLER_LQR
+    bool "LQR controller"
+    help
+        Use the LQR controller as default
+
 endchoice
 
 config CONTROLLER_OOT

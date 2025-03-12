@@ -188,6 +188,7 @@ typedef enum control_mode_e {
   controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
   controlModeForceTorque = 1,
   controlModeForce       = 2,
+  controlModeLQR         = 3,
 } control_mode_t;
 
 typedef struct control_s {
@@ -211,6 +212,24 @@ typedef struct control_s {
           float torqueX;
           float torqueY;
           float torqueZ;
+        };
+      };
+    };
+
+    // controlModeLQR
+    // Note: in this mode, the inputs to the bicopter are the
+    // thrusts from the BLDC motors (in Newtons)
+    // and the angles of the servos (in radians, horizontal=0)
+    struct {
+      union {
+        struct {
+          float thrustLeft;
+          float thrustRight;
+          float servoLeft;
+          float servoRight;
+        };
+        struct {
+          float u[4];
         };
       };
     };

@@ -23,6 +23,7 @@
 #include "autoconf.h"
 #include "config.h"
 #include "math.h"
+#include "math3d.h"
 #include "platform_defaults.h"
 #include "bicopterdeck.h"
 
@@ -76,6 +77,11 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
     }
 
     return thrust;
+}
+
+static void bicopterBLDCMotorThrustToPwm()
+{
+    // Not implemented yet
 }
 
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
@@ -154,6 +160,21 @@ static void powerDistributionForce(const control_t *control, motors_thrust_uncap
     // Not implemented yet
 }
 
+static void powerDistributionLQR(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+    // Not implemented yet
+
+    // TODO: which motor is which?
+    motorThrustUncapped->motors.m3 = control->thrustLeft * UINT16_MAX;
+    motorThrustUncapped->motors.m4 = control->thrustLeft * UINT16_MAX;
+    motorThrustUncapped->motors.m1 = control->thrustLeft * UINT16_MAX;
+    motorThrustUncapped->motors.m2 = control->thrustLeft * UINT16_MAX;
+
+    // the LQR controller gives the outputs in radians
+    // so we need to convert them to degrees
+    s_servo1_angle = degrees(control->servoLeft);
+    s_servo2_angle = degrees(control->servoRight);
+}
+
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   switch (control->controlMode) {
@@ -165,6 +186,9 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
         break;
     case controlModeForce:
         powerDistributionForce(control, motorThrustUncapped);
+        break;
+    case controlModeLQR:
+        powerDistributionLQR(control, motorThrustUncapped);
         break;
     default:
         // Nothing here
