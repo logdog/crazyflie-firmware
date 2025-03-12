@@ -80,30 +80,13 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
 
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
-    //   int16_t r = control->roll / 2.0f;
-    //   int16_t p = control->pitch / 2.0f;
-
-    //   motorThrustUncapped->motors.m1 = control->thrust - r + p + control->yaw;
-    //   motorThrustUncapped->motors.m2 = control->thrust - r - p - control->yaw;
-    //   motorThrustUncapped->motors.m3 = control->thrust + r - p + control->yaw;
-    //   motorThrustUncapped->motors.m4 = control->thrust + r + p - control->yaw;
-    // motorThrustUncapped->motors.m1 = control->thrust;
-    // motorThrustUncapped->motors.m2 = control->thrust;
-
     // DSHOT
-    motorThrustUncapped->motors.m3 = control->thrust * UINT16_MAX;
-    motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX;
-    motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX;
-    motorThrustUncapped->motors.m2 = control->thrust * UINT16_MAX;
+    motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX; // left
+    motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX; // right
 
+    // pitch and roll are already in degrees
     s_servo1_angle = control->pitch;
     s_servo2_angle = control->roll;
-
-    // SERVOS
-    // s_servo1_angle = 90*control->thrust;
-    // s_servo2_angle = 90*control->thrust;
-
-    // DEBUG_PRINT("c: %f", (double)control->thrust);
 }
 
 static void powerDistributionForceTorque(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
