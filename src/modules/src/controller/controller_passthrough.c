@@ -5,6 +5,7 @@
 #include "log.h"
 #include "param.h"
 #include "math3d.h"
+#include "debug.h"
 
 
 static float cmd_thrust;
@@ -20,20 +21,25 @@ bool controllerPassthroughTest(void)
   return true;
 }
 
-
+// static int passthroughCount = 0;
 void controllerPassthrough(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep)
 {
   control->controlMode = controlModeLegacy;
-  control->thrust = setpoint->thrust;
+  control->thrust = setpoint->thrust / 65535.0f;
   control->roll = setpoint->attitude.roll;
   control->pitch = setpoint->attitude.pitch;
 
   cmd_thrust = control->thrust;
   cmd_roll = control->roll;
   cmd_pitch = control->pitch;
+
+  // if (passthroughCount % 1000 == 0) {
+  //   DEBUG_PRINT("controllerPassthrough: %f\n", (double) cmd_thrust);
+  // }
+  // passthroughCount++;
 }
 
 /**
