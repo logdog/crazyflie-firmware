@@ -201,6 +201,7 @@ bool servoTest(void)
   return isInit1 && isInit2;
 }
 
+// left servo (WHITE)
 void servo1SetAngle(double angle)
 {
   // set CCR register
@@ -216,6 +217,7 @@ void servo1SetAngle(double angle)
   #endif
 }
 
+// right servo (RED)
 void servo2SetAngle(double angle)
 {
   // set CCR register

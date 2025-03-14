@@ -18,9 +18,9 @@
 #include "deck_core.h"
 
 /******** Defines ********/
-#define SERVO_PWM_PERIOD         1000  // ARR register content
+#define SERVO_PWM_PERIOD         8000  // ARR register content
 #define SERVO_PWM_FREQUENCY_HZ   50 // target servo pwm frequency
-#define SERVO_PWM_PRESCALE       (uint16_t) (1680) // 84mhz / (50hz * ARR)
+#define SERVO_PWM_PRESCALE       (uint16_t) (210) // 84mhz / (50hz * ARR)
 
 extern double s_servo1_angle;
 extern double s_servo2_angle;
