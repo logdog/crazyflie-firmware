@@ -139,7 +139,6 @@ bool supervisorIsPreflightTimeout(SupervisorMem_t *this, const uint32_t currentT
     return false;
   }
 
-  return false; // manually disable timeout
   const uint32_t preflightTime = currentTick - this->latestArmingTick;
   return preflightTime > M2T(preflightTimeoutDuration);
 }
