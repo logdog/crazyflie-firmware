@@ -176,6 +176,36 @@ GPIO_InitTypeDef GPIO_PassthroughOutput =
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
   #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+  #ifdef CONFIG_PLATFORM_BICOPTER
+  ASSERT(id < NBR_OF_MOTORS);
+
+  if (motorMap[id]->drvType == BRUSHED)
+  {
+    /*
+    * A LiPo battery is supposed to be 16.8V charged, 14.8V mid-charge and 12V
+    * discharged.
+    *
+    * A suitable sanity check for disabling the voltage compensation would be
+    * under 2V. That would suggest a damaged battery. This protects against
+    * rushing the motors on bugs and invalid voltage levels.
+    */
+    if (supplyVoltage < 12.0f)
+    {
+      return iThrust;
+    }
+
+    float thrust = (iThrust / 65536.0f) * 954; // thrust in grams (max thrust at nominal voltage)
+
+    // we want the motors to be off when thrust is very small
+    if (thrust < 10.0) {
+      return iThrust;
+    }
+
+    float volts = 0.011538*thrust + 3.79; // desired voltage (Veff)
+    float ratio = volts / supplyVoltage;
+    return UINT16_MAX * ratio;
+  }
+  #else
   ASSERT(id < NBR_OF_MOTORS);
 
   if (motorMap[id]->drvType == BRUSHED)
@@ -198,6 +228,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     float ratio = volts / supplyVoltage;
     return UINT16_MAX * ratio;
   }
+  #endif
   #endif
 
   return iThrust;
