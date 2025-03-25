@@ -81,6 +81,7 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
     // DSHOT
+    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX]
     motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX; // left
     motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX; // right
 

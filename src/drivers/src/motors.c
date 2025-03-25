@@ -179,7 +179,8 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   #ifdef CONFIG_PLATFORM_BICOPTER
   ASSERT(id < NBR_OF_MOTORS);
 
-  if (motorMap[id]->drvType == BRUSHED)
+  // only compensate for the propellers and NOT the servos
+  if (id == MOTOR_M1 || id == MOTOR_M4)
   {
     /*
     * A LiPo battery is supposed to be 16.8V charged, 14.8V mid-charge and 12V
@@ -194,18 +195,14 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       return iThrust;
     }
 
-    float thrust = (iThrust / 65536.0f) * 954; // thrust in grams (max thrust at nominal voltage)
-
-    // we want the motors to be off when thrust is very small
-    if (thrust < 10.0) {
-      return iThrust;
-    }
-
-    float volts = 0.011538*thrust + 3.79; // desired voltage (Veff)
+    // input thrust is in range [0, UINT16_MAX]
+    // convert to grams
+    float thrust = (iThrust / 65536.0f) * 650.0f;
+    float volts = -0.0000226f * thrust * thrust + 0.03029f * thrust; // desired voltage (Veff)
     float ratio = volts / supplyVoltage;
     return UINT16_MAX * ratio;
   }
-  #else
+  #else // !CONFIG_PLATFORM_BICOPTER
   ASSERT(id < NBR_OF_MOTORS);
 
   if (motorMap[id]->drvType == BRUSHED)
@@ -232,6 +229,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   #endif
 
   return iThrust;
+
 }
 
 /* Public functions */
