@@ -37,14 +37,6 @@
 #endif
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
-static float armLength = ARM_LENGTH; // m
-static float thrustToTorque = 0.005964552f;
-
-// thrust = a * pwm^2 + b * pwm
-//    where PWM is normalized (range 0...1)
-//          thrust is in Newtons (per rotor)
-static float pwmToThrustA = 0.091492681f;
-static float pwmToThrustB = 0.067673604f;
 
 int powerDistributionMotorType(uint32_t id)
 {
@@ -149,10 +141,15 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
 
     float x1_N = control->Fz / 2.0f;
     float x4_N = control->Fz / 2.0f;
-    float vBatt = pmGetBatteryVoltage();
-
+    
     float y1 = -0.942f * x1_N * x1_N + 6.18f * x1_N;
     float y4 = -0.942f * x4_N * x4_N + 6.18f * x4_N;
+    
+    #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+    float vBatt = pmGetBatteryVoltage();
+    #else
+    float vBatt = 14.8f; // 4S battery nominal voltage
+    #endif
 
     float pwm1 = y1 / vBatt;
     float pwm4 = y4 / vBatt;
@@ -254,16 +251,16 @@ PARAM_GROUP_STOP(powerDist)
 /**
  * System identification parameters for quad rotor
  */
-PARAM_GROUP_START(quadSysId)
+// PARAM_GROUP_START(quadSysId)
 
-PARAM_ADD(PARAM_FLOAT, thrustToTorque, &thrustToTorque)
-PARAM_ADD(PARAM_FLOAT, pwmToThrustA, &pwmToThrustA)
-PARAM_ADD(PARAM_FLOAT, pwmToThrustB, &pwmToThrustB)
+// PARAM_ADD(PARAM_FLOAT, thrustToTorque, &thrustToTorque)
+// PARAM_ADD(PARAM_FLOAT, pwmToThrustA, &pwmToThrustA)
+// PARAM_ADD(PARAM_FLOAT, pwmToThrustB, &pwmToThrustB)
 
 /**
  * @brief Length of arms (m)
  *
  * The distance from the center to a motor
  */
-PARAM_ADD(PARAM_FLOAT, armLength, &armLength)
-PARAM_GROUP_STOP(quadSysId)
+// PARAM_ADD(PARAM_FLOAT, armLength, &armLength)
+// PARAM_GROUP_STOP(quadSysId)
