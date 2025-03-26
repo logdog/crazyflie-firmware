@@ -148,7 +148,7 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     s_servo2_angle = 0.0f;
     
     // given the desired force, get the DSHOT value to send to the motors.
-    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.4129].
+    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.3743225] (0 to 650g).
     // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
     // Veff = -0.942 * x^2 + 6.18 * x; where x is the thrust in Newtons and Veff = vBatt * pwm
     float y1 = -0.942f * x1_N * x1_N + 6.18f * x1_N;
@@ -232,7 +232,7 @@ uint32_t powerDistributionGetIdleThrust()
 float powerDistributionGetMaxThrust() {
     // max thrust per rotor occurs if normalized PWM is 1
     // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
-    return 6.4129f; // Netwons = 650 grams
+    return 6.3743225; // 650 grams
 }
 
 /**
