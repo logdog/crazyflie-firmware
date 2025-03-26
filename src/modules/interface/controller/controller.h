@@ -37,7 +37,10 @@ typedef enum {
   ControllerTypeLee,
 #ifdef CONFIG_CONTROLLER_PASSTHROUGH
   ControllerTypePassthrough,
-#endif
+#endif // CONFIG_CONTROLLER_PASSTHROUGH
+#ifdef CONFIG_CONTROLLER_WRENCH
+  ControllerTypeWrench,
+#endif // CONFIG_CONTROLLER_WRENCH
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif

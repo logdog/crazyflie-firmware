@@ -52,6 +52,10 @@ config CONTROLLER_PASSTHROUGH
     help
         Use the Passthrough controller as default
 
+config CONTROLLER_WRENCH
+    bool "Wrench controller"
+    help
+        Use the Wrench controller as default
 endchoice
 
 config CONTROLLER_OOT
