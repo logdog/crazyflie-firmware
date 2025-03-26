@@ -81,6 +81,7 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
     // DSHOT
+    // control->thrust is in range [0, 1]
     // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX]
     motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX; // left
     motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX; // right
@@ -138,6 +139,27 @@ static void powerDistributionForce(const control_t *control, motors_thrust_uncap
     // Not implemented yet
 }
 
+static void powerDistributionWrench(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+    // DSHOT
+    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.4129]
+    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
+
+    float desiredThrustPercent = control->Fz / powerDistributionGetMaxThrust();
+
+    float supplyVoltage = pmGetBatteryVoltage();
+
+    motorThrustUncapped->motors.m1 = desiredThrustPercent * UINT16_MAX; // left
+    motorThrustUncapped->motors.m4 = desiredThrustPercent * UINT16_MAX; // right
+
+    // TODO: implement the actual equivalent wrench mapping
+    // by taking in the desired wrench (control->wrench) and converting it to
+    // the servo angles (in deg) and the motorThrustUncapped values (0 to 65535)
+
+    // give the servo angles in degrees
+    s_servo1_angle = 0.0f;
+    s_servo2_angle = 0.0f;
+}
+
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   switch (control->controlMode) {
@@ -149,6 +171,9 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
         break;
     case controlModeForce:
         powerDistributionForce(control, motorThrustUncapped);
+        break;
+    case controlModeWrench:
+        powerDistributionWrench(control, motorThrustUncapped);
         break;
     default:
         // Nothing here
@@ -200,7 +225,7 @@ uint32_t powerDistributionGetIdleThrust()
 float powerDistributionGetMaxThrust() {
     // max thrust per rotor occurs if normalized PWM is 1
     // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
-    return STABILIZER_NR_OF_MOTORS * (pwmToThrustA + pwmToThrustB);
+    return 6.4129f; // Netwons = 650 grams
 }
 
 /**

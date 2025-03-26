@@ -355,7 +355,7 @@ static void stabilizerTask(void* param)
 
         // print the thrust and battery voltage every 1 second
         if (count % 1000 == 0) {
-          DEBUG_PRINT("PWM: %0.2f, Batt: %0.3f, CMD: %0.2f\n", (double)control.thrust, (double)pmGetBatteryVoltage(), (double)motorPwm.motors.m1);
+          DEBUG_PRINT("Fz: %0.2f, Batt: %0.3f, CMD: %0.2f\n", (double)control.Fz, (double)pmGetBatteryVoltage(), (double)motorPwm.motors.m1);
         }
 
       } else {

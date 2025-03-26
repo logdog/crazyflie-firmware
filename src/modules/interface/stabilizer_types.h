@@ -188,6 +188,7 @@ typedef enum control_mode_e {
   controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
   controlModeForceTorque = 1,
   controlModeForce       = 2,
+  controlModeWrench      = 3,
 } control_mode_t;
 
 typedef struct control_s {
@@ -217,6 +218,23 @@ typedef struct control_s {
 
     // controlModeForce
     float normalizedForces[STABILIZER_NR_OF_MOTORS]; // 0.0 ... 1.0
+
+    // controlModeWrench
+    // need the values to have unique names, hence the underscore
+    struct {
+      union {
+        float wrench[6]; // N, Nm
+        struct {
+          float Fx; // N
+          float Fy;
+          float Fz;
+          float Tx; // Nm
+          float Ty;
+          float Tz;
+        };
+      };
+    };
+
   };
 
   control_mode_t controlMode;
