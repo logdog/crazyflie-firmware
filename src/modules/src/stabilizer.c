@@ -311,7 +311,10 @@ static void stabilizerTask(void* param)
   xRateSupervisorSemaphore = xSemaphoreCreateBinary();
   STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
 
+  int hasReachedCriticalBatteryLevel = false;
+
   while(1) {
+
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
 
@@ -348,20 +351,26 @@ static void stabilizerTask(void* param)
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
+      // if the battery voltage drops to a critical level, stop the motors
+      float batteryVoltage = pmGetBatteryVoltage();
+      if (batteryVoltage < DEFAULT_BAT_CRITICAL_LOW_VOLTAGE && !hasReachedCriticalBatteryLevel) {
+        DEBUG_PRINT("Battery voltage critical (%f), stopping motors\n. Reboot required.", (double)batteryVoltage);
+        hasReachedCriticalBatteryLevel = true;
+      }
+
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      if (areMotorsAllowedToRun && pmGetBatteryVoltage() > DEFAULT_BAT_CRITICAL_LOW_VOLTAGE) {
-        count++;
+      if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
         controlMotors(&control);
-
-        // print the thrust and battery voltage every 1 second
-        if (count % 1000 == 0) {
-          DEBUG_PRINT("Fz: %0.4f Batt: %0.3f CMD: %0.2f\n", (double)control.Fz, (double)pmGetBatteryVoltage(), (double)motorPwm.motors.m1);
-        }
-
       } else {
         motorsStop();
-        count = 0;
+      }
+
+      // print the thrust and battery voltage every 1 second
+      count++;
+      count %= 1000;
+      if (count == 0) {
+        DEBUG_PRINT("Fz: %0.4f Batt: %0.3f CMD: %0.2f\n", (double)control.Fz, (double)pmGetBatteryVoltage(), (double)motorPwm.motors.m1);
       }
 
       // Compute compressed log formats
