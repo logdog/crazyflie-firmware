@@ -36,6 +36,9 @@
 #  define DEFAULT_IDLE_THRUST CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #endif
 
+static float pwmToThrustA = 0.08830f;
+static float pwmToThrustB = 0.08718f;
+
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
 int powerDistributionMotorType(uint32_t id)
@@ -140,8 +143,8 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     // the servo angles (in deg) and the motorThrustUncapped values (0 to 65535)
 
     // get the desired force to be produced by each motor
-    float x1_N = control->Fz / 2.0f;
-    float x4_N = control->Fz / 2.0f;
+    float m1_force = control->Fz / 2.0f;
+    float m4_force = control->Fz / 2.0f;
 
     // set the servo angles in degrees
     s_servo1_angle = 0.0f;
@@ -150,9 +153,11 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     // given the desired force, get the DSHOT value to send to the motors.
     // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.3743225] (0 to 650g).
     // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
-    // Veff = -0.942 * x^2 + 6.18 * x; where x is the thrust in Newtons and Veff = vBatt * pwm
-    float y1 = -0.942f * x1_N * x1_N + 6.18f * x1_N;
-    float y4 = -0.942f * x4_N * x4_N + 6.18f * x4_N;
+
+    // Force (N) = pwmToThrustA * Veff^2 + pwmToThrustB * Veff
+
+    float y1 = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA * m1_force)) / (2.0f * pwmToThrustA);
+    float y4 = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA * m4_force)) / (2.0f * pwmToThrustA);
     
     #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
     float vBatt = pmGetBatteryVoltage();
@@ -232,7 +237,7 @@ uint32_t powerDistributionGetIdleThrust()
 float powerDistributionGetMaxThrust() {
     // max thrust per rotor occurs if normalized PWM is 1
     // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
-    return 6.3743225; // 650 grams
+    return pwmToThrustA + pwmToThrustB;
 }
 
 /**
