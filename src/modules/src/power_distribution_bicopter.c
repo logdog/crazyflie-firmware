@@ -36,8 +36,8 @@
 #  define DEFAULT_IDLE_THRUST CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #endif
 
-static float pwmToThrustA = 0.08830f;
-static float pwmToThrustB = 0.08718f;
+static float pwmToThrustA = 0.04415f;
+static float pwmToThrustB = 0.04359f;
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
@@ -235,9 +235,8 @@ uint32_t powerDistributionGetIdleThrust()
 }
 
 float powerDistributionGetMaxThrust() {
-    // max thrust per rotor occurs if normalized PWM is 1
-    // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
-    return pwmToThrustA + pwmToThrustB;
+    // maximum thrust per motor (70% pwm at nominal voltage in Newtons)
+    return 5.0f;
 }
 
 /**

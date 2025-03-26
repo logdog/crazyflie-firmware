@@ -27,8 +27,8 @@ void controllerWrench(control_t *control, const setpoint_t *setpoint,
                                          const stabilizerStep_t stabilizerStep)
 {
   float normalizedThrust = setpoint->thrust / 65000.0f; // max thrust is 65000, NOT 65535
-  float thrust_g = normalizedThrust * 650.0f; // thrust in grams
-  float thrust_N = thrust_g * 0.00980665f; // thrust in N
+  float thrust_N = normalizedThrust * 10.0f; // thrust in N
+  // (absolute max is about 20N, but 10 is easier to think about)
 
   control->controlMode = controlModeWrench;
   control->Fx = 0.0f; // N
