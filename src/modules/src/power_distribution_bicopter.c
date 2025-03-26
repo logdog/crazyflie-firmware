@@ -133,15 +133,24 @@ static void powerDistributionForce(const control_t *control, motors_thrust_uncap
 }
 
 static void powerDistributionWrench(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
-    // DSHOT
-    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.4129]
-    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
 
-    // Veff = -0.942 * x^2 + 6.18 * x; where x is the thrust in Newtons and Veff = vBatt * pwm
 
+    // TODO: implement the actual equivalent wrench mapping
+    // by taking in the desired wrench (control->wrench) and converting it to
+    // the servo angles (in deg) and the motorThrustUncapped values (0 to 65535)
+
+    // get the desired force to be produced by each motor
     float x1_N = control->Fz / 2.0f;
     float x4_N = control->Fz / 2.0f;
+
+    // set the servo angles in degrees
+    s_servo1_angle = 0.0f;
+    s_servo2_angle = 0.0f;
     
+    // given the desired force, get the DSHOT value to send to the motors.
+    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.4129].
+    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
+    // Veff = -0.942 * x^2 + 6.18 * x; where x is the thrust in Newtons and Veff = vBatt * pwm
     float y1 = -0.942f * x1_N * x1_N + 6.18f * x1_N;
     float y4 = -0.942f * x4_N * x4_N + 6.18f * x4_N;
     
@@ -154,16 +163,8 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     float pwm1 = y1 / vBatt;
     float pwm4 = y4 / vBatt;
 
-    motorThrustUncapped->motors.m1 = pwm1 * UINT16_MAX; // left
-    motorThrustUncapped->motors.m4 = pwm4 * UINT16_MAX; // right
-
-    // TODO: implement the actual equivalent wrench mapping
-    // by taking in the desired wrench (control->wrench) and converting it to
-    // the servo angles (in deg) and the motorThrustUncapped values (0 to 65535)
-
-    // give the servo angles in degrees
-    s_servo1_angle = 0.0f;
-    s_servo2_angle = 0.0f;
+    motorThrustUncapped->motors.m1 = pwm1 * UINT16_MAX; // left motor
+    motorThrustUncapped->motors.m4 = pwm4 * UINT16_MAX; // right motor
 }
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
