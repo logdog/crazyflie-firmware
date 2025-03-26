@@ -56,6 +56,7 @@
 #include "statsCnt.h"
 #include "static_mem.h"
 #include "rateSupervisor.h"
+#include "platform_defaults.h"
 
 static bool isInit;
 
@@ -349,7 +350,7 @@ static void stabilizerTask(void* param)
 
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      if (areMotorsAllowedToRun) {
+      if (areMotorsAllowedToRun && pmGetBatteryVoltage() > DEFAULT_BAT_CRITICAL_LOW_VOLTAGE) {
         count++;
         controlMotors(&control);
 
