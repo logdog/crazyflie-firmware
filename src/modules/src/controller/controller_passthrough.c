@@ -28,7 +28,7 @@ void controllerPassthrough(control_t *control, const setpoint_t *setpoint,
                                          const stabilizerStep_t stabilizerStep)
 {
   control->controlMode = controlModeLegacy;
-  control->thrust = setpoint->thrust / 65535.0f;
+  control->thrust = setpoint->thrust / 65000.0f; // normalized 0 to 1
   control->roll = setpoint->attitude.roll;
   control->pitch = setpoint->attitude.pitch;
 
