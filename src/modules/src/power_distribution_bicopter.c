@@ -25,6 +25,7 @@
 #include "math.h"
 #include "platform_defaults.h"
 #include "bicopterdeck.h"
+#include "pm.h"
 
 #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0)) && defined(CONFIG_MOTORS_DEFAULT_IDLE_THRUST) && (CONFIG_MOTORS_DEFAULT_IDLE_THRUST > 0)
 #error "CONFIG_MOTORS_REQUIRE_ARMING must be defined and not set to 0 if CONFIG_MOTORS_DEFAULT_IDLE_THRUST is greater than 0"
@@ -144,12 +145,20 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.4129]
     // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
 
-    float desiredThrustPercent = control->Fz / powerDistributionGetMaxThrust();
+    // Veff = -0.942 * x^2 + 6.18 * x; where x is the thrust in Newtons and Veff = vBatt * pwm
 
-    float supplyVoltage = pmGetBatteryVoltage();
+    float x1_N = control->Fz / 2.0f;
+    float x4_N = control->Fz / 2.0f;
+    float vBatt = pmGetBatteryVoltage();
 
-    motorThrustUncapped->motors.m1 = desiredThrustPercent * UINT16_MAX; // left
-    motorThrustUncapped->motors.m4 = desiredThrustPercent * UINT16_MAX; // right
+    float y1 = -0.942f * x1_N * x1_N + 6.18f * x1_N;
+    float y4 = -0.942f * x4_N * x4_N + 6.18f * x4_N;
+
+    float pwm1 = y1 / vBatt;
+    float pwm4 = y4 / vBatt;
+
+    motorThrustUncapped->motors.m1 = pwm1 * UINT16_MAX; // left
+    motorThrustUncapped->motors.m4 = pwm4 * UINT16_MAX; // right
 
     // TODO: implement the actual equivalent wrench mapping
     // by taking in the desired wrench (control->wrench) and converting it to
