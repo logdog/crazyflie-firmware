@@ -42,16 +42,12 @@ extern const MotorPerifDef* servoMapRX2;
 extern const MotorPerifDef* servoMapTX2;
 extern const MotorPerifDef* servoMapMOSI;
 
-/* Public functions */
-static uint8_t servo1_idle = 90;
-static uint8_t servo2_idle = 90;
-static uint8_t servo_range = 180; // in degrees
 
-static int16_t right_servo_trim = 0;
-static int16_t left_servo_trim = 0;
+static int16_t right_servo_trim = 26;
+static int16_t left_servo_trim = 10;
 
-double s_servo1_angle = 0;
-double s_servo2_angle = 0;
+double s_servo1_angle = 0; // LEFT servo in Degrees
+double s_servo2_angle = 0; // RIGHT servo in Degrees
 
 void servo1MapInit(const MotorPerifDef* servoMapSelect)
 {
@@ -207,7 +203,7 @@ void servo1SetAngle(double angle)
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = (angle+servo1_idle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
+  double pulse_length_us = 1500.0f + 12.5f * angle;
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + left_servo_trim);
   servo1Map->setCompare(servo1Map->tim, ccr_val);
@@ -223,7 +219,7 @@ void servo2SetAngle(double angle)
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = (angle+servo2_idle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
+  double pulse_length_us = 1500.0f + 12.5f * angle;
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + right_servo_trim);
   servo2Map->setCompare(servo2Map->tim, ccr_val);
@@ -248,7 +244,6 @@ static const DeckDriver bicopter_deck = {
 
 DECK_DRIVER(bicopter_deck);
 
-
 /**
  * [bideck] Bicopter deck parameters
  */
@@ -264,30 +259,3 @@ PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, left_servo_trim, &left_servo_trim)
  */
 PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, right_servo_trim, &right_servo_trim)
 PARAM_GROUP_STOP(bideck)
-
-// /**
-//  * "Servo" deck parameters
-//  */
-// PARAM_GROUP_START(servo)
-
-// /**
-//  * @brief PWM pulse width for minimal servo position (in microseconds)
-//  */
-// PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, servoMINus, &servo_MIN_us)
-// /**
-//  * @brief PWM pulse width for maximal servo position (in microseconds)
-//  */
-// PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, servoMAXus, &servo_MAX_us)
-// /**
-//  * @brief Servo range, i.e. angle between the min and max positions (in degrees)
-//  */
-// PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servoRange, &servo_range)
-// /**
-//  * @brief Servo idle (startup) angular position (in degrees, min = 0, max = servoRange)
-//  */
-// /**
-//  * @brief Servo angular position (in degrees, min = 0, max = servoRange)
-//  */
-// PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
-
-// PARAM_GROUP_STOP(servo)
