@@ -352,11 +352,11 @@ static void stabilizerTask(void* param)
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
       // if the battery voltage drops to a critical level, stop the motors
-      float batteryVoltage = pmGetBatteryVoltage();
-      if (batteryVoltage < DEFAULT_BAT_CRITICAL_LOW_VOLTAGE && !hasReachedCriticalBatteryLevel) {
-        DEBUG_PRINT("Battery voltage critical (%f), stopping motors\n. Reboot required.", (double)batteryVoltage);
-        hasReachedCriticalBatteryLevel = true;
-      }
+      // float batteryVoltage = pmGetBatteryVoltage();
+      // if (batteryVoltage < DEFAULT_BAT_CRITICAL_LOW_VOLTAGE && !hasReachedCriticalBatteryLevel) {
+      //   DEBUG_PRINT("Battery voltage critical (%f), stopping motors\n. Reboot required.", (double)batteryVoltage);
+      //   hasReachedCriticalBatteryLevel = true;
+      // }
 
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
