@@ -172,6 +172,37 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     motorThrustUncapped->motors.m4 = pwm4 * UINT16_MAX; // right motor
 }
 
+static void powerDistributionLQR(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+    // get the desired force to be produced by each motor
+    float m1_force = control->motorLeft_N;
+    float m4_force = control->motorRight_N;
+
+    // set the servo angles in degrees
+    s_servo1_angle = control->servoLeft_deg;
+    s_servo2_angle = control->servoRight_deg;
+    
+    // given the desired force, get the DSHOT value to send to the motors.
+    // control->Fz is the force we want to produce by using both motors in Newtons in range [0, 6.3743225] (0 to 650g).
+    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
+
+    // Force (N) = pwmToThrustA * Veff^2 + pwmToThrustB * Veff
+
+    float y1 = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA * m1_force)) / (2.0f * pwmToThrustA);
+    float y4 = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA * m4_force)) / (2.0f * pwmToThrustA);
+    
+    #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+    float vBatt = pmGetBatteryVoltage();
+    #else
+    float vBatt = 14.8f; // 4S battery nominal voltage
+    #endif
+
+    float pwm1 = y1 / vBatt;
+    float pwm4 = y4 / vBatt;
+
+    motorThrustUncapped->motors.m1 = pwm1 * UINT16_MAX; // left motor
+    motorThrustUncapped->motors.m4 = pwm4 * UINT16_MAX; // right motor
+}
+
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   switch (control->controlMode) {
@@ -186,6 +217,9 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
         break;
     case controlModeWrench:
         powerDistributionWrench(control, motorThrustUncapped);
+        break;
+    case controlModeLQR:
+        powerDistributionLQR(control, motorThrustUncapped);
         break;
     default:
         // Nothing here

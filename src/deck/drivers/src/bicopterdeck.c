@@ -23,8 +23,8 @@
 #include "autoconf.h"
 #include "config.h"
 
-static uint16_t servo_MIN_us = 1000;
-static uint16_t servo_MAX_us = 2000;
+// static uint16_t servo_MIN_us = 1000;
+// static uint16_t servo_MAX_us = 2000;
 
 #include "bicopterdeck.h"
 
@@ -203,7 +203,7 @@ void servo1SetAngle(double angle)
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = 1500.0f + 12.5f * angle;
+  double pulse_length_us = 1500.0 + 12.5 * angle;
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + left_servo_trim);
   servo1Map->setCompare(servo1Map->tim, ccr_val);
@@ -219,7 +219,7 @@ void servo2SetAngle(double angle)
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = 1500.0f + 12.5f * angle;
+  double pulse_length_us = 1500.0 + 12.5 * angle;
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ + right_servo_trim);
   servo2Map->setCompare(servo2Map->tim, ccr_val);

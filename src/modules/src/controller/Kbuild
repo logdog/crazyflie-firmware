@@ -9,3 +9,4 @@ obj-y += position_controller_pid.o
 obj-y += controller_lee.o
 obj-y += controller_passthrough.o
 obj-y += controller_wrench.o
+obj-y += controller_lqr.o
