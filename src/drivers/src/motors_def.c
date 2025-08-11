@@ -826,3 +826,64 @@ const MotorPerifDef* servoMapRX2 = &MOTORS_PA3_TIM5_CH4_BRUSHLESS_OD;
  * Servo mapped to IO1 port
  */
 const MotorPerifDef* servoMapIO1 = &MOTORS_PB8_TIM4_CH3_BRUSHLESS_OD;
+
+
+// Servo-specific definitions with 50Hz PWM timing
+// Deck IO1, PB8, TIM4_CH3 - Servo PWM timing
+static const MotorPerifDef MOTORS_PB8_TIM4_CH3_SERVO =
+{
+    .drvType       = SERVO,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_8,
+    .gpioPinSource = GPIO_PinSource8,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM4,
+    .timPerif      = RCC_APB1Periph_TIM4,
+    .tim           = TIM4,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM4_STOP,
+    .timPeriod     = 20000-1,  // 20ms period for 50Hz servo PWM
+    .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
+    .setCompare    = TIM_SetCompare3,
+    .getCompare    = TIM_GetCapture3,
+    .ocInit        = TIM_OC3Init,
+    .preloadConfig = TIM_OC3PreloadConfig
+};
+
+// Deck IO2, PB5, TIM3_CH2 - Servo PWM timing  
+static const MotorPerifDef MOTORS_PB5_TIM3_CH2_SERVO =
+{
+    .drvType       = SERVO,
+    .gpioPerif     = RCC_AHB1Periph_GPIOB,
+    .gpioPort      = GPIOB,
+    .gpioPin       = GPIO_Pin_5,
+    .gpioPinSource = GPIO_PinSource5,
+    .gpioOType     = GPIO_OType_PP,
+    .gpioAF        = GPIO_AF_TIM3,
+    .timPerif      = RCC_APB1Periph_TIM3,
+    .tim           = TIM3,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM3_STOP,
+    .timPeriod     = 20000-1,  // 20ms period for 50Hz servo PWM
+    .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
+    .setCompare    = TIM_SetCompare2,
+    .getCompare    = TIM_GetCapture2,
+    .ocInit        = TIM_OC2Init,
+    .preloadConfig = TIM_OC2PreloadConfig
+};
+
+/**
+ * Bicopter motor configuration using IO1 and IO2 for servos
+ * M1 -> Standard motor connector M1 (PA1, TIM2_CH2) - Left motor  
+ * M2 -> IO1 pin (PB8, TIM4_CH3) - Left servo with servo PWM timing
+ * M3 -> IO2 pin (PB5, TIM3_CH2) - Right servo with servo PWM timing
+ * M4 -> Standard motor connector M4 (PB9, TIM4_CH4) - Right motor
+ */
+const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS] =
+{
+  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,    // M1 - Left motor (standard)
+  &MOTORS_PB8_TIM4_CH3_SERVO,           // M2 - Left servo (IO1 with servo PWM)
+  &MOTORS_PB5_TIM3_CH2_SERVO,           // M3 - Right servo (IO2 with servo PWM)
+  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_PP // M4 - Right motor (standard)
+};

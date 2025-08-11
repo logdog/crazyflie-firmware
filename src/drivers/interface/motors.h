@@ -209,6 +209,7 @@ typedef enum
 {
   BRUSHED,
   BRUSHLESS,
+  SERVO,
 } motorsDrvType;
 
 typedef struct
@@ -261,6 +262,7 @@ extern const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS];
 extern const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS];
 
 /**
  * Test sound tones

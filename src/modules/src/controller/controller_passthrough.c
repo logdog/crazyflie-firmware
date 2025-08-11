@@ -36,10 +36,9 @@ void controllerPassthrough(control_t *control, const setpoint_t *setpoint,
   cmd_roll = control->roll;
   cmd_pitch = control->pitch;
 
-  // if (passthroughCount % 1000 == 0) {
-  //   DEBUG_PRINT("setpoint->thrust: %f\n", (double) setpoint->thrust);
-  // }
-  // passthroughCount++;
+  if (stabilizerStep % 1000 == 0) {
+    DEBUG_PRINT("setpoint->thrust: %f\n", (double) setpoint->thrust);
+  }
 }
 
 /**

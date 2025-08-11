@@ -303,7 +303,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   }
 
   isInit = true;
-
+  
   // Output zero power
   motorsStop();
 
@@ -367,7 +367,11 @@ void motorsStop()
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  if (motorMap[0]->drvType == BRUSHLESS)
+  bool someMotorIsBrushless = false;
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    someMotorIsBrushless |= (motorMap[i]->drvType == BRUSHLESS);
+  }
+  if (someMotorIsBrushless)
   {
     motorsBurstDshot();
   }
@@ -398,6 +402,7 @@ static void motorsDshotDMASetup()
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
+    if (motorMap[i]->drvType != BRUSHLESS) { continue; } // skip non-brushless motors
     DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[i]->DMA_PerifAddr;
     DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[i];
     DMA_InitStructureShare.DMA_Channel = motorMap[i]->DMA_Channel;
@@ -417,6 +422,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   uint16_t dshotRatio;
 
   ASSERT(id < NBR_OF_MOTORS);
+  if (motorMap[id]->drvType != BRUSHLESS) { return; }
 
   // Scale 16 -> 11 bits
   dshotRatio = (ratio >> 5);
@@ -462,7 +468,8 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
  */
 void motorsBurstDshot()
 {
-
+    #ifndef CONFIG_PLATFORM_BICOPTER
+    // original code, which assumes all motors are brushless
     motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M1*/
@@ -485,6 +492,18 @@ void motorsBurstDshot()
     DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
+    #else
+    // only M1 and M4 are brushless
+    motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
+    DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
+
+    motorMap[3]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
+    DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
+    #endif
 }
 #endif
 
@@ -518,9 +537,12 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       motorMap[id]->setCompare(motorMap[id]->tim, motorsBLConv16ToBits(ratio));
 #endif
     }
-    else
+    else if (motorMap[id]->drvType == BRUSHED)
     {
       motorMap[id]->setCompare(motorMap[id]->tim, motorsConv16ToBits(ratio));
+    }
+    else if (motorMap[id]->drvType == SERVO) {
+      motorMap[id]->setCompare(motorMap[id]->tim, ratio);
     }
 
     if (id == MOTOR_M1)
@@ -688,12 +710,14 @@ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
   DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
   DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
 }
+#ifndef CONFIG_PLATFORM_BICOPTER
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
 }
+#endif
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
@@ -704,12 +728,14 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
+#ifndef CONFIG_PLATFORM_BICOPTER
 void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
 }
+#endif
 #endif
 
 

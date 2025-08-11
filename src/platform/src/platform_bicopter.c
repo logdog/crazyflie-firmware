@@ -31,7 +31,7 @@ static platformConfig_t configs[] = {
     .deviceTypeName = "Bicopter Bolt 1.1",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
-    .motorMap = motorMapBolt11Brushless,
+    .motorMap = motorMapBicopterBrushless,
   }
 #endif
 };

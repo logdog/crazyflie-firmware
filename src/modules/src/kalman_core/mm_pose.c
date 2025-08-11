@@ -26,6 +26,16 @@
 #include "mm_pose.h"
 #include "math3d.h"
 
+// float q_ekf_x;
+// float q_ekf_y;
+// float q_ekf_z;
+// float q_ekf_w;
+
+// float q_measured_x;
+// float q_measured_y;
+// float q_measured_z;
+// float q_measured_w;
+
 void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
 {
   // a direct measurement of states x, y, and z, and orientation
@@ -43,6 +53,18 @@ void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
   struct quat const q_residual = qqmul(qinv(q_ekf), q_measured);
   // small angle approximation, see eq. 141 in http://mars.cs.umn.edu/tr/reports/Trawny05b.pdf
   struct vec const err_quat = vscl(2.0f / q_residual.w, quatimagpart(q_residual));
+  // struct vec const err_quat = quat2rpy(q_residual); // see comment https://github.com/bitcraze/crazyflie-firmware/issues/1292#issuecomment-1589899155
+
+  // logging
+  // q_ekf_x = q_ekf.x;
+  // q_ekf_y = q_ekf.y;
+  // q_ekf_z = q_ekf.z;
+  // q_ekf_w = q_ekf.w;
+
+  // q_measured_x = q_measured.x;
+  // q_measured_y = q_measured.y;
+  // q_measured_z = q_measured.z;
+  // q_measured_w = q_measured.w;
 
   // do a scalar update for each state
   {
@@ -60,3 +82,15 @@ void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
     kalmanCoreScalarUpdate(this, &H, err_quat.z, pose->stdDevQuat);
   }
 }
+
+// #include "log.h"
+// LOG_GROUP_START(mmpose)
+// LOG_ADD(LOG_FLOAT, q_ekf_x, &q_ekf_x)
+// LOG_ADD(LOG_FLOAT, q_ekf_y, &q_ekf_y)
+// LOG_ADD(LOG_FLOAT, q_ekf_z, &q_ekf_z)
+// LOG_ADD(LOG_FLOAT, q_ekf_w, &q_ekf_w)
+// LOG_ADD(LOG_FLOAT, q_measured_x, &q_measured_x)
+// LOG_ADD(LOG_FLOAT, q_measured_y, &q_measured_y)
+// LOG_ADD(LOG_FLOAT, q_measured_z, &q_measured_z)
+// LOG_ADD(LOG_FLOAT, q_measured_w, &q_measured_w)
+// LOG_GROUP_STOP(mmpose)
