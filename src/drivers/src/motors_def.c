@@ -885,5 +885,5 @@ const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS] =
   &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,    // M1 - Left motor (standard)
   &MOTORS_PB8_TIM4_CH3_SERVO,           // M2 - Left servo (IO1 with servo PWM)
   &MOTORS_PB5_TIM3_CH2_SERVO,           // M3 - Right servo (IO2 with servo PWM)
-  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_PP // M4 - Right motor (standard)
+  &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP // M4 - Right motor (standard)
 };
