@@ -50,21 +50,36 @@ static controllerLQR_t g_self = {
 };
 #else // CONFIG_BATTERY_1550
 // updated controller that uses correct signs for all 4 inputs of the bicopter
+// static controllerLQR_t g_self = {
+//   .k1 = {0.08371652f, -0.00621467f, 0.00000000f,
+//          0.04511223f, 0.53510613f, -0.20028632f, 0.12704892f, -0.00977868f, -0.00000000f, 0.00705775f, 0.05985790f, -0.03927555f},
+
+//   .k2 = {0.08371652f, 0.00621467f, 0.00000000f,
+//          -0.04511223f, 0.53510613f, 0.20028632f, 0.12704892f, 0.00977868f, 0.00000000f, -0.00705775f, 0.05985790f, 0.03927555f},
+
+//   .k3 = {0.00000000f, -0.57378878f, 2.05772639f,
+//          3.56149929f, 0.00000000f, 0.09668341f, 0.00000000f, -0.86363577f, 2.34124778f, 0.37319333f, 0.00000000f, 0.01287597f},
+
+//   .k4 = {0.00000000f, 0.57378878f, 2.05772639f,
+//          -3.56149929f, 0.00000000f, -0.09668341f, -0.00000000f, 0.86363577f, 2.34124778f, -0.37319333f, -0.00000000f, -0.01287597f},
+
+//   .mass = 0.575f // kg
+// };
 static controllerLQR_t g_self = {
-  .k1 = {0.08371652f, -0.00621467f, 0.00000000f,
-         0.04511223f, 0.53510613f, -0.20028632f, 0.12704892f, -0.00977868f, -0.00000000f, 0.00705775f, 0.05985790f, -0.03927555f},
+  .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
+         0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
 
-  .k2 = {0.08371652f, 0.00621467f, 0.00000000f,
-         -0.04511223f, 0.53510613f, 0.20028632f, 0.12704892f, 0.00977868f, 0.00000000f, -0.00705775f, 0.05985790f, 0.03927555f},
+  .k2 = {0.09149180f, 0.00926999f, -0.00000000f,
+         -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, 0.00000000f, -0.00733346f, 0.06230944f, 0.04034881f},
 
-  .k3 = {0.00000000f, -0.57378878f, 2.05772639f,
-         3.56149929f, 0.00000000f, 0.09668341f, 0.00000000f, -0.86363577f, 2.34124778f, 0.37319333f, 0.00000000f, 0.01287597f},
+  .k3 = {0.00000000f, -0.89836564f, 2.14498959f,
+         4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 2.42921273f, 0.39774998f, 0.00000000f, 0.01305347f},
 
-  .k4 = {0.00000000f, 0.57378878f, 2.05772639f,
-         -3.56149929f, 0.00000000f, -0.09668341f, -0.00000000f, 0.86363577f, 2.34124778f, -0.37319333f, -0.00000000f, -0.01287597f},
+  .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
+         -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
 
-  .mass = 0.575f // kg
-};
+  .mass = 0.575f
+  };
 
 // static controllerLQR_t g_self = {
 //   .k1 = {0.08371652f, -0.00859505f, -0.00000000f,
@@ -116,6 +131,20 @@ enum LQR_MODES {
 
 static uint8_t lqr_mode = INFINITE_HORIZON;
 
+// flapping parameters
+struct flappingConfig_s {
+    uint8_t enabled; // 0: disabled, 1: should start when t=xxx.0 seconds, 2: actively running
+    float hz;
+    float amplitudeDeg;
+};
+
+struct flappingConfig_s flappingConfig = {
+  .enabled = 0,
+  .hz = 5,
+  .amplitudeDeg = 2
+};
+
+
 // logging variables
 static float px, py, pz;
 static float vx, vy, vz;
@@ -127,7 +156,7 @@ static float leftServo;
 static float rightServo;
 
 // averaging filter on the angular velocities
-#define FILTER_LENGTH 10
+#define FILTER_LENGTH 5
 static float filter_wx[FILTER_LENGTH] = {0.0f};
 static float filter_wy[FILTER_LENGTH] = {0.0f};
 static float filter_wz[FILTER_LENGTH] = {0.0f};
@@ -164,7 +193,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   wy_avg /= (float) FILTER_LENGTH;
   wz_avg /= (float) FILTER_LENGTH;
 
-  if (!RATE_DO_EXECUTE(RATE_50_HZ, tick)) {
+  if (!RATE_DO_EXECUTE(RATE_100_HZ, tick)) {
     return;
   }
 
@@ -248,6 +277,21 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     }
     control->motorRight_N = tmp + 9.81f*self->mass/2.0f;
   }
+
+  // wait until time is a whole second increment for continuous transition to flapping/not flapping
+  if (flappingConfig.enabled == 1 && (tick % 1000) == 0) {
+    flappingConfig.enabled = 2;
+  }
+  else if (flappingConfig.enabled == 3 && (tick % 1000) == 0) {
+    flappingConfig.enabled = 0;
+  }
+
+  // "flap" by adding an offset to the servo motors
+  if (flappingConfig.enabled == 2 || flappingConfig.enabled == 3) {
+    float offset = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
+    control->servoLeft_deg += offset;
+    control->servoRight_deg += offset;
+  }
   
   // logging
   leftMotor = control->motorLeft_N;
@@ -323,6 +367,9 @@ LOG_ADD(LOG_FLOAT, rightServo, &rightServo)
 
 LOG_GROUP_STOP(ctrlLQR)
 
-PARAM_GROUP_START(ctrlLQRParam)
+PARAM_GROUP_START(ctrlLQR)
 PARAM_ADD(PARAM_UINT8, lqr_mode, &lqr_mode)
-PARAM_GROUP_STOP(ctrlLQRParam)
+PARAM_ADD(PARAM_UINT8, flap_en, &flappingConfig.enabled)
+PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig.hz)
+PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig.amplitudeDeg)
+PARAM_GROUP_STOP(ctrlLQR)

@@ -843,12 +843,12 @@ static const MotorPerifDef MOTORS_PB8_TIM4_CH3_SERVO =
     .tim           = TIM4,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM4_STOP,
-    .timPeriod     = 20000-1,  // 20ms period for 50Hz servo PWM
+    .timPeriod     = 5000-1,  // 20ms period for 50Hz servo PWM
     .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
-    .preloadConfig = TIM_OC3PreloadConfig
+    .preloadConfig = TIM_OC3PreloadConfig,
 };
 
 // Deck IO2, PB5, TIM3_CH2 - Servo PWM timing  
@@ -865,12 +865,12 @@ static const MotorPerifDef MOTORS_PB5_TIM3_CH2_SERVO =
     .tim           = TIM3,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM3_STOP,
-    .timPeriod     = 20000-1,  // 20ms period for 50Hz servo PWM
+    .timPeriod     = 5000-1,  // 20ms period for 50Hz servo PWM
     .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
-    .preloadConfig = TIM_OC2PreloadConfig
+    .preloadConfig = TIM_OC2PreloadConfig,
 };
 
 /**

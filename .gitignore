@@ -53,3 +53,5 @@ tools/dependency/web/data.js
 .gitignore
 Doxyfile
 FreeRTOS
+cache/
+*_old.c

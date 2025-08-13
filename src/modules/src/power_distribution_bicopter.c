@@ -38,6 +38,7 @@ struct bicopterConfig_s {
     float rightMotorTrim;
     int16_t leftServoTrim;
     int16_t rightServoTrim;
+    float usPerDeg;
 };
 
 struct bicopterConfig_s bicopterConfig = {
@@ -56,14 +57,18 @@ struct bicopterConfig_s bicopterConfig = {
 #endif
 
 #if defined(CONFIG_BICOPTER_NAME_MELONCOPTER)
-  .leftServoTrim = 32 + 7,
-  .rightServoTrim = 6 + 7,
+//   .leftServoTrim = 32 + 7,
+//   .rightServoTrim = 6 + 7,
+    .leftServoTrim = 85,
+    .rightServoTrim = 60,
 #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-  .leftServoTrim = 21,
-  .rightServoTrim = 6,
+    .leftServoTrim = 21,
+    .rightServoTrim = 6,
 #else
 #error "MELONCOPTER or REDCOPTER must be selected"
 #endif
+
+    .usPerDeg = 11.11f,
 };
 
 #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0)) && defined(CONFIG_MOTORS_DEFAULT_IDLE_THRUST) && (CONFIG_MOTORS_DEFAULT_IDLE_THRUST > 0)
@@ -90,11 +95,11 @@ uint16_t powerDistributionStopRatio(uint32_t id)
         return 0;
     }
     else if (id == MOTOR_M2) {
-        return 600 + bicopterConfig.leftServoTrim + 0;
+        return 1500 + bicopterConfig.leftServoTrim + 0;
     }
-    else {
-        return 600 - bicopterConfig.rightMotorTrim - 0;
-    }
+    
+    // id == MOTOR_M3
+    return 1500 - bicopterConfig.rightServoTrim - 0;
 }
 
 void powerDistributionInit(void)
@@ -112,22 +117,54 @@ bool powerDistributionTest(void)
     return pass;
 }
 
+static int32_t leftServoDegToMicroseconds(float deg) {
+    return 1500 + bicopterConfig.leftServoTrim + bicopterConfig.usPerDeg * deg;
+}
+
+static int32_t rightServoDegToMicroseconds(float deg) {
+    return 1500 - bicopterConfig.rightServoTrim - bicopterConfig.usPerDeg * deg;
+}
+
+static int32_t motorThrustToDSHOT(float motorThrust_N) {
+    // given the desired force (N), get the DSHOT value to send to the motors.
+    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
+
+    // Force (N) = pwmToThrustA * Veff^2 + pwmToThrustB * Veff
+    float y = (-bicopterConfig.pwmToThrustB + sqrtf(bicopterConfig.pwmToThrustB * bicopterConfig.pwmToThrustB + 4.0f * bicopterConfig.pwmToThrustA * motorThrust_N)) / (2.0f * bicopterConfig.pwmToThrustA);
+    
+    #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+    float vBatt = pmGetBatteryVoltage();
+    #else
+    float vBatt = 14.8f; // 4S battery nominal voltage
+    #endif
+
+    float pwm = y / vBatt;
+
+    // maximum pwm value is 1.0
+    // pwmAdjust is a parameter we can set to scale up or down all thrusts
+    float m_pwm = fmin(pwm, 1.0f);
+
+    return m_pwm * UINT16_MAX;
+}
+
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
-    // DSHOT
-    // control->thrust is in range [0, 1]
-    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX]
-    #if defined(CONFIG_BICOPTER_NAME_MELONCOPTER)
-    motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX * bicopterConfig.leftMotorTrim; // left
-    motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX * bicopterConfig.rightMotorTrim; // right
-    #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-    motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX * bicopterConfig.leftMotorTrim; // left
-    motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX * bicopterConfig.rightMotorTrim; // right
-    #endif
-    
-    // pitch and roll are already in degrees
-    motorThrustUncapped->motors.m2 = 600 + bicopterConfig.leftServoTrim + 4*control->servoLeft_deg;
-    motorThrustUncapped->motors.m3 = 600 - bicopterConfig.rightServoTrim - 4*control->servoRight_deg;
+    // powerDistributionGetMaxThrust()
+    // int32_t leftMotorThrust = control->thrust / 2 + control->roll;
+    // int32_t rightMotorThrust = control->thrust / 2 + control->pitch;
+    // float leftServoAngleDeg = (control->roll - control->yaw) / 6000.0f;
+    // float rightServoAngleDeg = (control->roll + control->yaw) / 6000.0f;
+
+    // #if defined(CONFIG_BICOPTER_NAME_MELONCOPTER)
+    // motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX * bicopterConfig.leftMotorTrim; // left
+    // motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX * bicopterConfig.rightMotorTrim; // right
+    // #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
+    // motorThrustUncapped->motors.m1 = control->thrust * UINT16_MAX * bicopterConfig.leftMotorTrim; // left
+    // motorThrustUncapped->motors.m4 = control->thrust * UINT16_MAX * bicopterConfig.rightMotorTrim; // right
+    // #endif
+
+    // motorThrustUncapped->motors.m2 = leftServoDegToMicroseconds(leftServoAngleDeg);
+    // motorThrustUncapped->motors.m3 = rightServoDegToMicroseconds(rightServoAngleDeg);
 }
 
 static void powerDistributionForceTorque(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
@@ -152,34 +189,12 @@ static void powerDistributionLQR(const control_t *control, motors_thrust_uncappe
     float m4_force = control->motorRight_N * bicopterConfig.rightMotorTrim;
     #endif
     
-    // given the desired force, get the DSHOT value to send to the motors.
-    // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
-
-    // Force (N) = pwmToThrustA * Veff^2 + pwmToThrustB * Veff
-
-    float y1 = (-bicopterConfig.pwmToThrustB + sqrtf(bicopterConfig.pwmToThrustB * bicopterConfig.pwmToThrustB + 4.0f * bicopterConfig.pwmToThrustA * m1_force)) / (2.0f * bicopterConfig.pwmToThrustA);
-    float y4 = (-bicopterConfig.pwmToThrustB + sqrtf(bicopterConfig.pwmToThrustB * bicopterConfig.pwmToThrustB + 4.0f * bicopterConfig.pwmToThrustA * m4_force)) / (2.0f * bicopterConfig.pwmToThrustA);
-    
-    #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
-    float vBatt = pmGetBatteryVoltage();
-    #else
-    float vBatt = 14.8f; // 4S battery nominal voltage
-    #endif
-
-    float pwm1 = y1 / vBatt;
-    float pwm4 = y4 / vBatt;
-
-    // maximum pwm value is 1.0
-    // pwmAdjust is a parameter we can set to scale up or down all thrusts
-    float m1_pwm = fmin(pwm1, 1.0f);
-    float m4_pwm = fmin(pwm4, 1.0f);
-
-    motorThrustUncapped->motors.m1 = m1_pwm * UINT16_MAX; // left motor
-    motorThrustUncapped->motors.m4 = m4_pwm * UINT16_MAX; // right motor
+    motorThrustUncapped->motors.m1 = motorThrustToDSHOT(m1_force); // left motor
+    motorThrustUncapped->motors.m4 = motorThrustToDSHOT(m4_force); // right motor
 
     // left and right servos
-    motorThrustUncapped->motors.m2 = 600 + bicopterConfig.leftServoTrim + 4*control->servoLeft_deg;
-    motorThrustUncapped->motors.m3 = 600 - bicopterConfig.rightServoTrim - 4*control->servoRight_deg;
+    motorThrustUncapped->motors.m2 = leftServoDegToMicroseconds(control->servoLeft_deg);
+    motorThrustUncapped->motors.m3 = rightServoDegToMicroseconds(control->servoRight_deg);
 }
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
@@ -228,12 +243,8 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, maxThrust, &isCapped);
     
     // Servos M2 and M3 (limit servo range)
-    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2,
-        600+bicopterConfig.leftMotorTrim-4*maxServoAngle, 
-        600+bicopterConfig.leftMotorTrim+4*maxServoAngle, &isCapped);
-    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 
-        600-bicopterConfig.rightMotorTrim-4*maxServoAngle, 
-        600-bicopterConfig.rightMotorTrim+4*maxServoAngle, &isCapped);
+    motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, leftServoDegToMicroseconds(-maxServoAngle), leftServoDegToMicroseconds(maxServoAngle), &isCapped);
+    motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, rightServoDegToMicroseconds(maxServoAngle), rightServoDegToMicroseconds(-maxServoAngle), &isCapped);
 
     return isCapped;
 }
