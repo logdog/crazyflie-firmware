@@ -154,6 +154,7 @@ static float leftMotor;
 static float rightMotor;
 static float leftServo;
 static float rightServo;
+static float flappingOffset;
 
 // averaging filter on the angular velocities
 #define FILTER_LENGTH 5
@@ -287,8 +288,9 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   }
 
   // "flap" by adding an offset to the servo motors
+  float offset = 0.0f;
   if (flappingConfig.enabled == 2 || flappingConfig.enabled == 3) {
-    float offset = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
+    offset = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
     control->servoLeft_deg += offset;
     control->servoRight_deg += offset;
   }
@@ -296,8 +298,9 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   // logging
   leftMotor = control->motorLeft_N;
   rightMotor = control->motorRight_N;
-  leftServo = control->servoLeft_deg;
-  rightServo = control->servoRight_deg;
+  leftServo = control->servoLeft_deg - offset; // log the servo value BEFORE offset was added
+  rightServo = control->servoRight_deg - offset;
+  flappingOffset = offset;
 
   px = state->position.x;
   py = state->position.y;
@@ -364,6 +367,9 @@ LOG_ADD(LOG_FLOAT, leftMotor, &leftMotor)
 LOG_ADD(LOG_FLOAT, rightMotor, &rightMotor)
 LOG_ADD(LOG_FLOAT, leftServo, &leftServo)
 LOG_ADD(LOG_FLOAT, rightServo, &rightServo)
+
+// log the flapping offset
+LOG_ADD(LOG_FLOAT, offset, &flappingOffset)
 
 LOG_GROUP_STOP(ctrlLQR)
 
