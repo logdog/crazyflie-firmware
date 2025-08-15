@@ -68,7 +68,8 @@ void adcInit(void)
 static uint16_t analogReadChannel(uint8_t channel)
 {
   /* According to datasheet, minimum sampling time for 12-bit conversion is 15 cycles. */
-  ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_15Cycles);
+  // ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_15Cycles);
+  ADC_RegularChannelConfig(ADC2, channel, 1, ADC_SampleTime_480Cycles);
 
   /* Start the conversion */
   ADC_SoftwareStartConv(ADC2);
