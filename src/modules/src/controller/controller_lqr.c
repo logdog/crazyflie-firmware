@@ -125,25 +125,39 @@ bool controllerLQRTest(controllerLQR_t* self)
 
 // parameters (can be set over the air via the crazyflie radio)
 enum LQR_MODES {
-  INFINITE_HORIZON = 0,
-  FINITE_HORIZON = 1,
+  DEFAULT = 0,          // infinite horizon, default controller
+  FINITE_HORIZON = 1,   // finite horizon controller (not working)
+  MANUAL_ROLL = 2,      // set absolute roll angle
+  MANUAL_PITCH = 4,     // set absolute pitch angle
+  MANUAL_Z_RATE = 8,    // set absolute (inertial frame) z velocity
 };
 
-static uint8_t lqr_mode = INFINITE_HORIZON;
+static uint8_t lqr_mode = DEFAULT;
 
 // flapping parameters
 struct flappingConfig_s {
-    uint8_t enabled; // 0: disabled, 1: should start when t=xxx.0 seconds, 2: actively running
+    enum flappingMode_s {
+      disabled = 0,
+      waitToEnable = 1,
+      rampingUp = 2,
+      enabled = 3,
+      waitToDisable = 4,
+    } state;
     float hz;
     float amplitudeDeg;
+    uint32_t lastTick;
 };
 
 struct flappingConfig_s flappingConfig = {
-  .enabled = 0,
-  .hz = 5,
-  .amplitudeDeg = 2
+  .state = disabled,
+  .hz = 10,
+  .amplitudeDeg = 10,
+  .lastTick = 0,
 };
 
+// set the previous last value
+static float lastServoLeftDeg = 0.0f;
+static float lastServoRightDeg = 0.0f;
 
 // logging variables
 static float px, py, pz;
@@ -155,6 +169,13 @@ static float rightMotor;
 static float leftServo;
 static float rightServo;
 static float flappingOffset;
+
+static uint8_t pitchMode;
+static uint8_t rollMode;
+static uint8_t zMode;
+static float sXPos, sYPos, sZPos;
+static float sXVel, sYVel, sZVel;
+static float sRoll, sPitch, sYaw;
 
 // averaging filter on the angular velocities
 #define FILTER_LENGTH 5
@@ -194,12 +215,56 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   wy_avg /= (float) FILTER_LENGTH;
   wz_avg /= (float) FILTER_LENGTH;
 
+  // add the flapping control signal
+  float flappingAngleOffsetDeg = 0.0f;
+  
+  // State Machine Transition Rules:
+  // 1. The flappingConfig.state will be set to "waitToEnable", "waitToDisable" (or "disable")
+  //    via a parameter over the air
+  // 2. Only transition to start/stop flapping at whole second increments
+  // 3. The rampingUp state will last 1 second
+  if (flappingConfig.state == waitToEnable && (tick % 1000) == 0) {
+    flappingConfig.state = rampingUp;
+    flappingConfig.lastTick = tick;
+  }
+  else if (flappingConfig.state == rampingUp && tick - flappingConfig.lastTick >= 1000) {
+    flappingConfig.state = enabled;
+  }
+  else if (flappingConfig.state == waitToDisable && (tick % 1000) == 0) {
+    flappingConfig.state = disabled;
+  }
+
+  // calculate the flapping offset angle
+  if (flappingConfig.state == rampingUp || flappingConfig.state == enabled || flappingConfig.state == waitToDisable) {
+    float multiplier = 1.0f;
+    if (flappingConfig.state == rampingUp) {
+      multiplier = (tick - flappingConfig.lastTick) / 1000.0f;
+    }
+    flappingAngleOffsetDeg = multiplier * flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
+  }
+
+  // always update the servo commands at 1kHz
   if (!RATE_DO_EXECUTE(RATE_100_HZ, tick)) {
+    control->servoLeft_deg = flappingAngleOffsetDeg + lastServoLeftDeg;   // when not flapping: 0 deg
+    control->servoRight_deg = flappingAngleOffsetDeg + lastServoRightDeg; // when not flapping: 0 deg
     return;
   }
 
   lqr_count++;
   control->controlMode = controlModeLQR;
+
+  // logging
+  rollMode = setpoint->mode.roll;
+  pitchMode = setpoint->mode.pitch;
+  zMode = setpoint->mode.z;
+  sRoll = setpoint->attitude.roll;
+  sPitch = setpoint->attitude.pitch;
+  sZVel = setpoint->velocity.z;
+
+  sXPos = setpoint->position.x;
+  sYPos = setpoint->position.y;
+  sZPos = setpoint->position.z;
+  sZVel = setpoint->velocity.z;
 
   float x[12] = {state->position.x, state->position.y, state->position.z,
                  radians(state->attitude.roll), -radians(state->attitude.pitch), radians(state->attitude.yaw),
@@ -209,19 +274,59 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   // x[10] = 0;
   // x[11] = 0;
 
-  float xd[12] = {setpoint->position.x, setpoint->position.y, setpoint->position.z, 
-                  0, 0, 0,
-                  0, 0, 0, 
-                  0, 0, 0};
+  float xd[12] = {0};
+
+  // althold flight mode. Values set with commander.send_setpoint()
+  if (setpoint->mode.roll == modeAbs && setpoint->mode.pitch == modeAbs && setpoint->mode.z == modeVelocity) {
+    xd[0] = x[0];  // x
+    xd[1] = x[1];  // y
+    xd[2] = x[2];  // z
+    xd[3] = radians(setpoint->attitude.roll);
+    xd[4] = -radians(setpoint->attitude.pitch);
+    xd[5] = 0.0f;  // yaw
+    xd[6] = x[6];  // x velocity
+    xd[7] = x[7];  // y velocity
+    xd[8] = setpoint->velocity.z;
+  }
+  // original flight mode
+  else {
+    // original flight mode
+    xd[0] = setpoint->position.x;
+    xd[1] = setpoint->position.y;
+    xd[2] = setpoint->position.z;
+  }
+
+  // float maxPitch = 20.0f;
+  // if ((setpoint->mode.pitch == modeAbs) && (-maxPitch < setpoint->attitude.pitch) && (setpoint->attitude.pitch < maxPitch)) {
+  //   // eliminate control action due to x position and x velocity errors
+  //   xd[0] = x[0];
+  //   xd[6] = x[6];
+  //   xd[4] = -radians(setpoint->attitude.pitch);
+  // }
+
+  // float maxRoll = 20.0f;
+  // if ((lqr_mode & MANUAL_ROLL) && (-maxRoll < setpoint->attitude.roll && setpoint->attitude.roll < maxRoll)) {
+  //   // eliminate control action due to y position and y velocity errors
+  //   xd[1] = x[1];
+  //   xd[7] = x[7];
+  //   xd[3] = radians(setpoint->attitude.roll);
+  // }
+
+  // // set absolute (inertial frame) z velocity
+  // float maxZRate = 2.0f;
+  // if ((lqr_mode & MANUAL_Z_RATE) && (-maxZRate < setpoint->velocity.z && setpoint->velocity.z < maxZRate)) {
+  //   xd[2] = x[2];
+  //   xd[8] = setpoint->velocity.z;
+  // }
 
   // for better landing
-  if (setpoint->mode.z == modeDisable) {
-    control->motorLeft_N = 0.0f;
-    control->motorRight_N = 0.0f;
-    control->servoLeft_deg = 0.0f;
-    control->servoRight_deg = 0.0f;
-    return;
-  }
+  // if (setpoint->mode.z == modeDisable) {
+  //   control->motorLeft_N = 0.0f;
+  //   control->motorRight_N = 0.0f;
+  //   control->servoLeft_deg = 0.0f;
+  //   control->servoRight_deg = 0.0f;
+  //   return;
+  // }
 
   if (lqr_mode == FINITE_HORIZON && fh_lqr_count < fh_lqr_max_index) {
   // if (false) {
@@ -247,7 +352,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     
     // return to the standard infinite horizon LQR controller
     if (fh_lqr_count >= fh_lqr_max_index) {
-      lqr_mode = INFINITE_HORIZON;
+      lqr_mode = DEFAULT;
       fh_lqr_count = 0;
     }
   }
@@ -258,13 +363,15 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     for (int i = 0; i < 12; i++) {
       tmp += -self->k1[i] * (x[i] - xd[i]);
     }
-    control->servoLeft_deg = degrees(tmp);
+    control->servoLeft_deg = degrees(tmp) + flappingAngleOffsetDeg;
+    lastServoLeftDeg = degrees(tmp);
     
     tmp = 0;
     for (int i = 0; i < 12; i++) {
       tmp += -self->k2[i] * (x[i] - xd[i]);
     }
-    control->servoRight_deg = degrees(tmp);
+    control->servoRight_deg = degrees(tmp) + flappingAngleOffsetDeg;
+    lastServoRightDeg = degrees(tmp);
 
     tmp = 0;
     for (int i = 0; i < 12; i++) {
@@ -279,28 +386,12 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     control->motorRight_N = tmp + 9.81f*self->mass/2.0f;
   }
 
-  // wait until time is a whole second increment for continuous transition to flapping/not flapping
-  if (flappingConfig.enabled == 1 && (tick % 1000) == 0) {
-    flappingConfig.enabled = 2;
-  }
-  else if (flappingConfig.enabled == 3 && (tick % 1000) == 0) {
-    flappingConfig.enabled = 0;
-  }
-
-  // "flap" by adding an offset to the servo motors
-  float offset = 0.0f;
-  if (flappingConfig.enabled == 2 || flappingConfig.enabled == 3) {
-    offset = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
-    control->servoLeft_deg += offset;
-    control->servoRight_deg += offset;
-  }
-  
   // logging
   leftMotor = control->motorLeft_N;
   rightMotor = control->motorRight_N;
-  leftServo = control->servoLeft_deg - offset; // log the servo value BEFORE offset was added
-  rightServo = control->servoRight_deg - offset;
-  flappingOffset = offset;
+  leftServo = control->servoLeft_deg - flappingAngleOffsetDeg; // log the servo value BEFORE flappingAngleOffsetDeg was added
+  rightServo = control->servoRight_deg - flappingAngleOffsetDeg;
+  flappingOffset = flappingAngleOffsetDeg;
 
   px = state->position.x;
   py = state->position.y;
@@ -317,7 +408,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   wx = wx_avg;
   wy = wy_avg;
   wz = wz_avg;
-
+  
   // disable motor output
   // control->motorLeft_N = 0.0f;
   // control->motorRight_N = 0.0f;
@@ -368,14 +459,32 @@ LOG_ADD(LOG_FLOAT, rightMotor, &rightMotor)
 LOG_ADD(LOG_FLOAT, leftServo, &leftServo)
 LOG_ADD(LOG_FLOAT, rightServo, &rightServo)
 
-// log the flapping offset
+// log the flapping
 LOG_ADD(LOG_FLOAT, offset, &flappingOffset)
+
+// log the setpoints
+LOG_ADD(LOG_FLOAT, sRoll, &sRoll)
+LOG_ADD(LOG_FLOAT, sPitch, &sPitch)
+LOG_ADD(LOG_FLOAT, sYaw, &sYaw)
+
+LOG_ADD(LOG_FLOAT, sXPos, &sXPos)
+LOG_ADD(LOG_FLOAT, sYPos, &sYPos)
+LOG_ADD(LOG_FLOAT, sZPos, &sZPos)
+
+LOG_ADD(LOG_FLOAT, sXVel, &sXVel)
+LOG_ADD(LOG_FLOAT, sYVel, &sYVel)
+LOG_ADD(LOG_FLOAT, sZVel, &sZVel)
+
+// log the modes
+LOG_ADD(LOG_UINT8, rollMode, &rollMode)
+LOG_ADD(LOG_UINT8, pitchMode, &pitchMode)
+LOG_ADD(LOG_UINT8, zMode, &zMode)
 
 LOG_GROUP_STOP(ctrlLQR)
 
 PARAM_GROUP_START(ctrlLQR)
 PARAM_ADD(PARAM_UINT8, lqr_mode, &lqr_mode)
-PARAM_ADD(PARAM_UINT8, flap_en, &flappingConfig.enabled)
+PARAM_ADD(PARAM_UINT8, flap_mode, &flappingConfig.state)
 PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig.hz)
 PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig.amplitudeDeg)
 PARAM_GROUP_STOP(ctrlLQR)

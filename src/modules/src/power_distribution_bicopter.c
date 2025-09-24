@@ -28,6 +28,7 @@
 #include "pm.h"
 #include "math3d.h"
 #include "motors.h"
+#include "supervisor.h"  // check if we are in e-stop mode
 
 // config struct which is customized to the
 // version of the bicopter, propeller type, etc.
@@ -62,8 +63,8 @@ struct bicopterConfig_s bicopterConfig = {
     .leftServoTrim = 85,
     .rightServoTrim = 60,
 #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-    .leftServoTrim = 21,
-    .rightServoTrim = 6,
+    .leftServoTrim = 0,
+    .rightServoTrim = 0,
 #else
 #error "MELONCOPTER or REDCOPTER must be selected"
 #endif
@@ -91,6 +92,12 @@ int powerDistributionMotorType(uint32_t id)
 
 uint16_t powerDistributionStopRatio(uint32_t id)
 {
+    
+    // // disable all motors in case of e-stop
+    // if (supervisorIsLocked()) {
+    //     return 0;
+    // }
+
     if (id == MOTOR_M1 || id == MOTOR_M4) {
         return 0;
     }
@@ -181,13 +188,8 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
 
 static void powerDistributionLQR(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
     // get the desired force to be produced by each motor
-    #if defined(CONFIG_BICOPTER_NAME_MELONCOPTER)
     float m1_force = control->motorRight_N * bicopterConfig.rightMotorTrim;
     float m4_force = control->motorLeft_N * bicopterConfig.leftMotorTrim;
-    #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-    float m1_force = control->motorLeft_N * bicopterConfig.leftMotorTrim;
-    float m4_force = control->motorRight_N * bicopterConfig.rightMotorTrim;
-    #endif
     
     motorThrustUncapped->motors.m1 = motorThrustToDSHOT(m1_force); // left motor
     motorThrustUncapped->motors.m4 = motorThrustToDSHOT(m4_force); // right motor
@@ -275,9 +277,9 @@ PARAM_GROUP_START(powerDist)
  * common value is between 3000 - 6000.
  */
 PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &idleThrust)
-PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, maxThrust, &maxThrust)
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, leftMotorTrim, &bicopterConfig.leftMotorTrim)
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, rightMotorTrim, &bicopterConfig.rightMotorTrim)
-PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, leftServoTrim, &bicopterConfig.leftServoTrim)
-PARAM_ADD(PARAM_INT16 | PARAM_PERSISTENT, rightServoTrim, &bicopterConfig.rightServoTrim)
+PARAM_ADD(PARAM_UINT16, maxThrust, &maxThrust)
+PARAM_ADD(PARAM_FLOAT, leftMotorTrim, &bicopterConfig.leftMotorTrim)
+PARAM_ADD(PARAM_FLOAT, rightMotorTrim, &bicopterConfig.rightMotorTrim)
+PARAM_ADD(PARAM_INT16, leftServoTrim, &bicopterConfig.leftServoTrim)
+PARAM_ADD(PARAM_INT16, rightServoTrim, &bicopterConfig.rightServoTrim)
 PARAM_GROUP_STOP(powerDist)

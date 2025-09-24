@@ -23,8 +23,8 @@
 // Defines for default values in the bolt platform
 
 // Default values for battery limits
-#define DEFAULT_BAT_LOW_VOLTAGE                   13.4f   // Bicopter Specific 4S-Lipo
-#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          12.4f   // Bicopter Specific 4S-Lipo
+#define DEFAULT_BAT_LOW_VOLTAGE                   14.8f   // Bicopter Specific 4S-Lipo
+#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          14.4f   // Bicopter Specific 4S-Lipo
 
 // the remainder of the file is unchanged from the bolt defaults
 
@@ -33,6 +33,11 @@
 // Default value for system shutdown in minutes after radio silence.
 // Requires kbuild config ENABLE_AUTO_SHUTDOWN to be activated.
 #define DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN       5
+
+// landing timeout in ms
+#define LANDING_TIMEOUT_MS 10000
+
+#define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
 // Default PID gains
 #define PID_ROLL_RATE_KP  250.0

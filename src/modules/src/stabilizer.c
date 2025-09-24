@@ -50,7 +50,7 @@
 #include "health.h"
 #include "supervisor.h"
 
-// delete me 
+// delete me at some point?
 #include "bicopterdeck.h"
 
 #include "estimator.h"
@@ -287,6 +287,7 @@ void rateSupervisorTask(void *pvParameters) {
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */
+static uint8_t runTest = 0;
 static void stabilizerTask(void* param)
 {
   stabilizerStep_t stabilizerStep;
@@ -306,7 +307,7 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
-  // int32_t count = 0;
+  int32_t count = 0;
 
   systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
@@ -362,8 +363,8 @@ static void stabilizerTask(void* param)
       //   hasReachedCriticalBatteryLevel = true;
       // }
 
-      // Critical for safety, be careful if you modify this code!
-      // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
+      // // Critical for safety, be careful if you modify this code!
+      // // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
       if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
 
         // wait 3 seconds before allowing the propellers to spin
@@ -382,6 +383,81 @@ static void stabilizerTask(void* param)
         motorsStop();
         // count = 0;
       }
+
+      // sweep experiment
+      // if (runTest) {
+      //   uint16_t step = 10;
+      //   uint16_t ratio = 800 + (step*(count/1000)) % (2200-800+step);
+      //   motorsSetRatio(MOTOR_M2, ratio);
+      //   motorsSetRatio(MOTOR_M3, ratio);
+      //   count++;
+      // }
+      // else {
+      //   motorsSetRatio(MOTOR_M2, 1500);
+      //   motorsSetRatio(MOTOR_M3, 1500);
+      //   count = 0;
+      // }
+
+      // set response experiment (runTest will tell us how many degrees to go up)
+      // if (runTest) {
+
+      //   uint16_t ratio = 1500;
+      //   switch (count/2000) {
+      //     case 0: ratio += 10; break;
+      //     case 2: ratio += 20; break;
+      //     case 4: ratio += 40; break;
+      //     case 6: ratio += 80; break;
+      //     case 8: ratio += 160; break;
+      //     case 10: ratio += 320; break;
+      //     case 12: ratio += 640; break;
+      //     default: ratio = 1500; break;
+      //   }
+      //   motorsSetRatio(MOTOR_M2, ratio);
+      //   motorsSetRatio(MOTOR_M3, ratio);
+      //   count++;
+      // }
+      // else {
+      //   motorsSetRatio(MOTOR_M2, 1500);
+      //   motorsSetRatio(MOTOR_M3, 1500);
+      //   count = 0;
+      // }
+
+      // experiment 3: flapping frequency response
+      // use the ratio as the frequency in Hz
+      // test will run for 15 seconds
+      // if (runTest) {
+      //   uint16_t base = 1500;
+      //   uint16_t amplitude = 20*10.277; // 20 deg
+      //   float frequencyHz = 0.0f; // how many full cycles per second
+      //   if (count < 3000) {
+      //     frequencyHz = 5.0f;
+      //   }
+      //   else if (count < 6000) {
+      //     frequencyHz = 10.0f;
+      //   }
+      //   else if (count < 9000) {
+      //     frequencyHz = 15.0f;
+      //   }
+      //   else if (count < 12000) {
+      //     frequencyHz = 20.0f;
+      //   }
+      //   else {
+      //     frequencyHz = 25.0f;
+      //   }
+      //   uint16_t ratio = base + amplitude * sinf(2.0f * (float)M_PI * frequencyHz * (float)count / 1000.0f);
+      //   uint16_t ratio3 = base - amplitude * sinf(2.0f * (float)M_PI * frequencyHz * (float)count / 1000.0f);
+      //   motorsSetRatio(MOTOR_M2, ratio); // left servo
+      //   motorsSetRatio(MOTOR_M3, ratio3);
+      //   count++;
+      //   if (count >= 15000) {
+      //     runTest = 0; // stop after 15 seconds
+      //   }
+      // }
+      // else {
+      //   motorsSetRatio(MOTOR_M2, 1500);
+      //   motorsSetRatio(MOTOR_M3, 1500);
+      //   count = 0;
+      // }
 
       // print the thrust and battery voltage every 1 second
       // count++;
@@ -420,6 +496,7 @@ static void stabilizerTask(void* param)
  * for the stabilizer module
  */
 PARAM_GROUP_START(stabilizer)
+PARAM_ADD(PARAM_UINT8, runTest, &runTest)
 /**
  * @brief Estimator type Auto select(0), complementary(1), extended kalman(2), **unscented kalman(3)  (Default: 0)
  *
