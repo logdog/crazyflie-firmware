@@ -146,6 +146,7 @@ struct flappingConfig_s {
     float hz;
     float amplitudeDeg;
     uint32_t lastTick;
+    uint8_t useAveragingFilter;
 };
 
 struct flappingConfig_s flappingConfig = {
@@ -153,6 +154,7 @@ struct flappingConfig_s flappingConfig = {
   .hz = 10,
   .amplitudeDeg = 10,
   .lastTick = 0,
+  .useAveragingFilter = 1,
 };
 
 // set the previous last value
@@ -177,12 +179,44 @@ static float sXPos, sYPos, sZPos;
 static float sXVel, sYVel, sZVel;
 static float sRoll, sPitch, sYaw;
 
+static uint32_t lastTick;
+
+// event variables (on the control loop, we want to publish the following events)
+
 // averaging filter on the angular velocities
 #define FILTER_LENGTH 5
 static float filter_wx[FILTER_LENGTH] = {0.0f};
 static float filter_wy[FILTER_LENGTH] = {0.0f};
 static float filter_wz[FILTER_LENGTH] = {0.0f};
 static int filter_count = 0;
+
+// we don't need to store the whole array - just accumuate and then divide
+#define AVERAGING_FILTER_LENGTH 5
+struct averagingFilter_s {
+  float pitch[AVERAGING_FILTER_LENGTH];
+  float x[AVERAGING_FILTER_LENGTH];
+  float wy[AVERAGING_FILTER_LENGTH];
+  float vx[AVERAGING_FILTER_LENGTH];
+
+  // warning: pitch is in degrees, wy in deg/s
+  float accPitch, accX, accWy, accVx; // accumulated
+  float avgPitch, avgX, avgWy, avgVx; // average
+  bool hasFilledUpOnce;
+  uint32_t count;
+};
+
+struct averagingFilter_s averagingFilter = {
+  .accPitch = 0.0f,
+  .accX = 0.0f,
+  .accWy = 0.0f,
+  .accVx = 0.0f,
+  .avgPitch = 0.0f,
+  .avgX = 0.0f,
+  .avgWy = 0.0f,
+  .avgVx = 0.0f,
+  .hasFilledUpOnce = false,
+  .count = 0,
+};
 
 // counter variables
 static unsigned int lqr_count = 0;
@@ -202,18 +236,66 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   filter_count++;
   filter_count %= FILTER_LENGTH;
 
-  float wx_avg = 0.0f;
-  float wy_avg = 0.0f;
-  float wz_avg = 0.0f;
+  // if we havent filled up the buffer all the way ever before, the average will be wrong but that's ok
+  if (!averagingFilter.hasFilledUpOnce) {
 
-  for (int i = 0; i < FILTER_LENGTH; i++) {
-    wx_avg += filter_wx[i];
-    wy_avg += filter_wy[i];
-    wz_avg += filter_wz[i];
+    // record the data to an array
+    averagingFilter.pitch[averagingFilter.count] = -state->attitude.pitch;
+    averagingFilter.x[averagingFilter.count] = state->position.x;
+    averagingFilter.wy[averagingFilter.count] = sensors->gyro.y;
+    averagingFilter.vx[averagingFilter.count] = state->velocity.x;
+
+    // update the accumulator
+    averagingFilter.accPitch += averagingFilter.pitch[averagingFilter.count];
+    averagingFilter.accX += averagingFilter.x[averagingFilter.count];
+    averagingFilter.accWy += averagingFilter.wy[averagingFilter.count];
+    averagingFilter.accVx += averagingFilter.vx[averagingFilter.count];
+
+    // update the counter
+    averagingFilter.count++;
+
+    // take the average
+    averagingFilter.avgPitch = averagingFilter.accPitch / (float) averagingFilter.count;
+    averagingFilter.avgX = averagingFilter.accX / (float) averagingFilter.count;
+    averagingFilter.avgWy = averagingFilter.accWy / (float) averagingFilter.count;
+    averagingFilter.avgVx = averagingFilter.accVx / (float) averagingFilter.count;
+
+    if (averagingFilter.count >= AVERAGING_FILTER_LENGTH) {
+      averagingFilter.count %= AVERAGING_FILTER_LENGTH;
+      averagingFilter.hasFilledUpOnce = true;
+    }
   }
-  wx_avg /= (float) FILTER_LENGTH;
-  wy_avg /= (float) FILTER_LENGTH;
-  wz_avg /= (float) FILTER_LENGTH;
+  else {
+    // if we have a full buffer, then each iteration we can update the moving average
+
+    // update the accumulator by first subtracting the oldest read data
+    // then adding in the current measurements
+
+    // decrease accumulator
+    averagingFilter.accPitch -= averagingFilter.pitch[averagingFilter.count];
+    averagingFilter.accX -= averagingFilter.x[averagingFilter.count];
+    averagingFilter.accWy -= averagingFilter.wy[averagingFilter.count];
+    averagingFilter.accVx -= averagingFilter.vx[averagingFilter.count];
+
+    // record data to array
+    averagingFilter.pitch[averagingFilter.count] = -state->attitude.pitch;
+    averagingFilter.x[averagingFilter.count] = state->position.x;
+    averagingFilter.wy[averagingFilter.count] = sensors->gyro.y;
+    averagingFilter.vx[averagingFilter.count] = state->velocity.x;
+
+    // increase accumulator
+    averagingFilter.accPitch += averagingFilter.pitch[averagingFilter.count];
+    averagingFilter.accX += averagingFilter.x[averagingFilter.count];
+    averagingFilter.accWy += averagingFilter.wy[averagingFilter.count];
+    averagingFilter.accVx += averagingFilter.vx[averagingFilter.count];
+
+
+    // update the counter
+    averagingFilter.count++;
+    averagingFilter.count %= AVERAGING_FILTER_LENGTH;
+
+    // we will only calculate the average when we actually need the control input (saves us a lot of calculations)
+  }
 
   // add the flapping control signal
   float flappingAngleOffsetDeg = 0.0f;
@@ -250,8 +332,28 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     return;
   }
 
+  // filter (only needs to run when the )
+  float wx_avg = 0.0f;
+  float wy_avg = 0.0f;
+  float wz_avg = 0.0f;
+
+  for (int i = 0; i < FILTER_LENGTH; i++) {
+    wx_avg += filter_wx[i];
+    wy_avg += filter_wy[i];
+    wz_avg += filter_wz[i];
+  }
+  wx_avg /= (float) FILTER_LENGTH;
+  wy_avg /= (float) FILTER_LENGTH;
+  wz_avg /= (float) FILTER_LENGTH;
+
   lqr_count++;
   control->controlMode = controlModeLQR;
+
+  // take the average
+  averagingFilter.avgPitch = averagingFilter.accPitch / (float) AVERAGING_FILTER_LENGTH;
+  averagingFilter.avgX = averagingFilter.accX / (float) AVERAGING_FILTER_LENGTH;
+  averagingFilter.avgWy = averagingFilter.accWy / (float) AVERAGING_FILTER_LENGTH;
+  averagingFilter.avgVx = averagingFilter.accVx / (float) AVERAGING_FILTER_LENGTH;
 
   // logging
   rollMode = setpoint->mode.roll;
@@ -266,13 +368,27 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   sZPos = setpoint->position.z;
   sZVel = setpoint->velocity.z;
 
+  wx = sensors->gyro.x;
+  wy = sensors->gyro.y;
+  wz = sensors->gyro.z;
+
+  // current state
   float x[12] = {state->position.x, state->position.y, state->position.z,
                  radians(state->attitude.roll), -radians(state->attitude.pitch), radians(state->attitude.yaw),
                  state->velocity.x, state->velocity.y, state->velocity.z,
-                 radians(wx_avg), radians(wy_avg), radians(wz_avg)};
+                 radians(wx), radians(wy), radians(wz)};
   // x[9] = 0;
   // x[10] = 0;
   // x[11] = 0;
+
+  // when flapping, use cycle-averaged estimator, if enabled
+  if (flappingConfig.useAveragingFilter == 1) {
+    // x[0] = averagingFilter.avgX;
+    // x[4] = radians(averagingFilter.avgPitch);
+    // x[6] = averagingFilter.avgVx;
+    x[10] = radians(averagingFilter.avgWy);
+    // x[10] = 0;
+  }
 
   float xd[12] = {0};
 
@@ -408,7 +524,8 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   wx = wx_avg;
   wy = wy_avg;
   wz = wz_avg;
-  
+
+  lastTick = tick;
   // disable motor output
   // control->motorLeft_N = 0.0f;
   // control->motorRight_N = 0.0f;
@@ -453,6 +570,12 @@ LOG_ADD(LOG_FLOAT, roll, &roll)
 LOG_ADD(LOG_FLOAT, pitch, &pitch)
 LOG_ADD(LOG_FLOAT, yaw, &yaw)
 
+// log the filtered states
+LOG_ADD(LOG_FLOAT, avgPitch, &averagingFilter.avgPitch)
+LOG_ADD(LOG_FLOAT, avgWy, &averagingFilter.avgWy)
+LOG_ADD(LOG_FLOAT, avgX, &averagingFilter.avgX)
+LOG_ADD(LOG_FLOAT, avgVx, &averagingFilter.avgVx)
+
 // log the motor outputs
 LOG_ADD(LOG_FLOAT, leftMotor, &leftMotor)
 LOG_ADD(LOG_FLOAT, rightMotor, &rightMotor)
@@ -480,6 +603,10 @@ LOG_ADD(LOG_UINT8, rollMode, &rollMode)
 LOG_ADD(LOG_UINT8, pitchMode, &pitchMode)
 LOG_ADD(LOG_UINT8, zMode, &zMode)
 
+LOG_ADD(LOG_UINT8, flap_mode, &flappingConfig.state)
+LOG_ADD(LOG_UINT8, flap_filter, &flappingConfig.useAveragingFilter)
+LOG_ADD(LOG_UINT32, tick, &lastTick)
+
 LOG_GROUP_STOP(ctrlLQR)
 
 PARAM_GROUP_START(ctrlLQR)
@@ -487,4 +614,5 @@ PARAM_ADD(PARAM_UINT8, lqr_mode, &lqr_mode)
 PARAM_ADD(PARAM_UINT8, flap_mode, &flappingConfig.state)
 PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig.hz)
 PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig.amplitudeDeg)
+PARAM_ADD(PARAM_UINT8, flap_filter, &flappingConfig.useAveragingFilter)
 PARAM_GROUP_STOP(ctrlLQR)

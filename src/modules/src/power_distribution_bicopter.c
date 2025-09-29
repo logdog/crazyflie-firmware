@@ -10,7 +10,7 @@
  *
  * @file power_distribution_bicopter.c
  * @author Logan Dihel
- * @brief Tells the motors what to do given the thrust and torque controller outputs
+* @brief Tells the motors what to do given the thrust and torque controller outputs
  * @details This file was modified from power_distribution_quadrotor.c
  */
 #include "power_distribution.h"
@@ -83,7 +83,7 @@ struct bicopterConfig_s bicopterConfig = {
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 static uint16_t maxThrust = UINT16_MAX;
-static float maxServoAngle = 30.0f;
+static float maxServoAngle = 60.0f;
 
 int powerDistributionMotorType(uint32_t id)
 {
