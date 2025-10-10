@@ -26,8 +26,10 @@
 #define DEFAULT_BAT_LOW_VOLTAGE                   14.8f   // Bicopter Specific 4S-Lipo
 #define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          14.4f   // Bicopter Specific 4S-Lipo
 
-// the remainder of the file is unchanged from the bolt defaults
+#define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 8000
+#define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
+// the remainder of the file is unchanged from the bolt defaults
 #define DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC   5
 
 // Default value for system shutdown in minutes after radio silence.
@@ -36,8 +38,6 @@
 
 // landing timeout in ms
 #define LANDING_TIMEOUT_MS 10000
-
-#define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
 // Default PID gains
 #define PID_ROLL_RATE_KP  250.0

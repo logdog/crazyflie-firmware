@@ -57,6 +57,9 @@ struct bicopterConfig_s bicopterConfig = {
 #error "Unsupported propeller and battery configuration"
 #endif
 
+    .leftMotorTrim = 1.0f,
+    .rightMotorTrim = 1.0f,
+
 #if defined(CONFIG_BICOPTER_NAME_MELONCOPTER)
 //   .leftServoTrim = 32 + 7,
 //   .rightServoTrim = 6 + 7,
@@ -124,15 +127,15 @@ bool powerDistributionTest(void)
     return pass;
 }
 
-static int32_t leftServoDegToMicroseconds(float deg) {
+static uint32_t leftServoDegToMicroseconds(float deg) {
     return 1500 + bicopterConfig.leftServoTrim + bicopterConfig.usPerDeg * deg;
 }
 
-static int32_t rightServoDegToMicroseconds(float deg) {
+static uint32_t rightServoDegToMicroseconds(float deg) {
     return 1500 - bicopterConfig.rightServoTrim - bicopterConfig.usPerDeg * deg;
 }
 
-static int32_t motorThrustToDSHOT(float motorThrust_N) {
+static uint32_t motorThrustToDSHOT(float motorThrust_N) {
     // given the desired force (N), get the DSHOT value to send to the motors.
     // motorThrustUncapped->motors.m1 is in range [0, UINT16_MAX] which is sent as a DSHOT value
 

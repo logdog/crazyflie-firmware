@@ -49,22 +49,27 @@ static controllerLQR_t g_self = {
   .mass = 0.470f // kg
 };
 #else // CONFIG_BATTERY_1550
-// updated controller that uses correct signs for all 4 inputs of the bicopter
+
+// controller works very well, especially if you set k1[10] = k2[10] = 0.10
 // static controllerLQR_t g_self = {
-//   .k1 = {0.08371652f, -0.00621467f, 0.00000000f,
-//          0.04511223f, 0.53510613f, -0.20028632f, 0.12704892f, -0.00977868f, -0.00000000f, 0.00705775f, 0.05985790f, -0.03927555f},
+//   .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
+//          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
 
-//   .k2 = {0.08371652f, 0.00621467f, 0.00000000f,
-//          -0.04511223f, 0.53510613f, 0.20028632f, 0.12704892f, 0.00977868f, 0.00000000f, -0.00705775f, 0.05985790f, 0.03927555f},
+//   .k2 = {0.09149180f, 0.00926999f, -0.00000000f,
+//          -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, 0.00000000f, -0.00733346f, 0.06230944f, 0.04034881f},
 
-//   .k3 = {0.00000000f, -0.57378878f, 2.05772639f,
-//          3.56149929f, 0.00000000f, 0.09668341f, 0.00000000f, -0.86363577f, 2.34124778f, 0.37319333f, 0.00000000f, 0.01287597f},
+//   .k3 = {0.00000000f, -0.89836564f, 2.14498959f,
+//          4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 2.42921273f, 0.39774998f, 0.00000000f, 0.01305347f},
 
-//   .k4 = {0.00000000f, 0.57378878f, 2.05772639f,
-//          -3.56149929f, 0.00000000f, -0.09668341f, -0.00000000f, 0.86363577f, 2.34124778f, -0.37319333f, -0.00000000f, -0.01287597f},
+//   .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
+//          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
 
-//   .mass = 0.575f // kg
+//   .mass = 0.575f
 // };
+
+// 1. try the higher mass value (works)
+// 2. tune the thrusters so that z error is minimal (did this)
+// 3. add in the bessel function multiplier for flapping (it actually over-compensates a bit)
 static controllerLQR_t g_self = {
   .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
@@ -78,24 +83,26 @@ static controllerLQR_t g_self = {
   .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
 
-  .mass = 0.575f
-  };
+  .mass = 0.60610744f
+};
 
 // static controllerLQR_t g_self = {
-//   .k1 = {0.08371652f, -0.00859505f, -0.00000000f,
-//          0.04613514f, 0.53510613f, -0.20030469f, 0.12704892f, -0.01083762f, -0.00000000f, 0.00710762f, 0.05985790f, -0.03927773f},
+//   .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
+//          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.1f, -0.04034881f},
 
-//   .k2 = {0.08371652f, 0.00859505f, 0.00000000f,
-//          -0.04613514f, 0.53510613f, 0.20030469f, 0.12704892f, 0.01083762f, 0.00000000f, -0.00710762f, 0.05985790f, 0.03927773f},
+//   .k2 = {0.09149180f, 0.00926999f, -0.00000000f,
+//          -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, 0.00000000f, -0.00733346f, 0.1f, 0.04034881f},
 
-//   .k3 = {-0.00000000f, -0.80922740f, 2.05772639f,
-//          3.65878927f, -0.00000000f, 0.09496807f, 0.00000000f, -0.96491855f, 2.34124778f, 0.37790522f, -0.00000000f, 0.01267421f},
+//   .k3 = {0.00000000f, -0.89836564f, 2.14498959f,
+//          4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 2.42921273f, 0.39774998f, 0.00000000f, 0.01305347f},
 
-//   .k4 = {0.00000000f, 0.80922740f, 2.05772639f,
-//          -3.65878927f, 0.00000000f, -0.09496807f, 0.00000000f, 0.96491855f, 2.34124778f, -0.37790522f, 0.00000000f, -0.01267421f},
+//   .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
+//          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
 
-//   .mass = 0.575f,
+//   .mass = 0.60610744f
 // };
+
+// also try the following one:
 
 #endif
 
@@ -154,7 +161,43 @@ struct flappingConfig_s flappingConfig = {
   .hz = 10,
   .amplitudeDeg = 10,
   .lastTick = 0,
-  .useAveragingFilter = 1,
+  .useAveragingFilter = 0,
+};
+
+// 1/J_0(a*pi/180) where J_0 is the 0th order Bessel function of the first kind
+// precomputed for a = 0, 1, 2, ..., 30 Deg
+static float besselMultiplier[] = {
+  1.0f,         // 0 deg
+  1.00010001f,
+  1.00030009f,
+  1.00070049f,
+  1.001201442f,
+  1.001903617f,
+  1.00270731f,
+  1.003713741f,
+  1.004924128f,
+  1.00623868f,
+  1.007658202f,
+  1.009285426f,
+  1.011020119f,
+  1.012965964f,
+  1.015125368f,
+  1.017397497f,
+  1.019783806f,
+  1.022390349f,
+  1.025115325f,
+  1.028066207f,
+  1.031140441f,
+  1.034447088f,
+  1.037882719f,
+  1.041558171f,
+  1.045369015f,
+  1.049317943f,
+  1.053518753f,
+  1.057977148f,
+  1.062473438f,
+  1.067235859f,
+  1.07227107f,  // 30 deg
 };
 
 // set the previous last value
@@ -191,7 +234,8 @@ static float filter_wz[FILTER_LENGTH] = {0.0f};
 static int filter_count = 0;
 
 // we don't need to store the whole array - just accumuate and then divide
-#define AVERAGING_FILTER_LENGTH 5
+// the averagingFilter_s struct is updated every tick (1 ms), so 1 flapping cycle is 100 ticks (100 ms)
+#define AVERAGING_FILTER_LENGTH 100
 struct averagingFilter_s {
   float pitch[AVERAGING_FILTER_LENGTH];
   float x[AVERAGING_FILTER_LENGTH];
@@ -217,6 +261,8 @@ struct averagingFilter_s averagingFilter = {
   .hasFilledUpOnce = false,
   .count = 0,
 };
+
+#define RAMP_TIME_MS (1000)
 
 // counter variables
 static unsigned int lqr_count = 0;
@@ -299,6 +345,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
 
   // add the flapping control signal
   float flappingAngleOffsetDeg = 0.0f;
+  float thrustOffsetN = self->mass * 9.81f / 2.0f;
   
   // State Machine Transition Rules:
   // 1. The flappingConfig.state will be set to "waitToEnable", "waitToDisable" (or "disable")
@@ -309,7 +356,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     flappingConfig.state = rampingUp;
     flappingConfig.lastTick = tick;
   }
-  else if (flappingConfig.state == rampingUp && tick - flappingConfig.lastTick >= 1000) {
+  else if (flappingConfig.state == rampingUp && tick - flappingConfig.lastTick >= RAMP_TIME_MS) {
     flappingConfig.state = enabled;
   }
   else if (flappingConfig.state == waitToDisable && (tick % 1000) == 0) {
@@ -320,9 +367,13 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   if (flappingConfig.state == rampingUp || flappingConfig.state == enabled || flappingConfig.state == waitToDisable) {
     float multiplier = 1.0f;
     if (flappingConfig.state == rampingUp) {
-      multiplier = (tick - flappingConfig.lastTick) / 1000.0f;
+      multiplier = (tick - flappingConfig.lastTick) / ((float) RAMP_TIME_MS);
     }
     flappingAngleOffsetDeg = multiplier * flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*tick/1000.0f);
+    // uint8_t a_deg = (uint8_t) roundf(fabsf(multiplier * flappingConfig.amplitudeDeg));
+    // if (a_deg >= 0 && a_deg <= 30) { 
+    //   thrustOffsetN = (self->mass * 9.81f / 2.0f) * besselMultiplier[a_deg]; 
+    // }
   }
 
   // always update the servo commands at 1kHz
@@ -350,10 +401,10 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   control->controlMode = controlModeLQR;
 
   // take the average
-  averagingFilter.avgPitch = averagingFilter.accPitch / (float) AVERAGING_FILTER_LENGTH;
-  averagingFilter.avgX = averagingFilter.accX / (float) AVERAGING_FILTER_LENGTH;
-  averagingFilter.avgWy = averagingFilter.accWy / (float) AVERAGING_FILTER_LENGTH;
-  averagingFilter.avgVx = averagingFilter.accVx / (float) AVERAGING_FILTER_LENGTH;
+  averagingFilter.avgPitch = averagingFilter.accPitch / (float) AVERAGING_FILTER_LENGTH; // deg
+  averagingFilter.avgX = averagingFilter.accX / (float) AVERAGING_FILTER_LENGTH;         // m
+  averagingFilter.avgWy = averagingFilter.accWy / (float) AVERAGING_FILTER_LENGTH;       // deg/s
+  averagingFilter.avgVx = averagingFilter.accVx / (float) AVERAGING_FILTER_LENGTH;       // m/s
 
   // logging
   rollMode = setpoint->mode.roll;
@@ -381,14 +432,27 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   // x[10] = 0;
   // x[11] = 0;
 
-  // when flapping, use cycle-averaged estimator, if enabled
-  if (flappingConfig.useAveragingFilter == 1) {
-    // x[0] = averagingFilter.avgX;
-    // x[4] = radians(averagingFilter.avgPitch);
-    // x[6] = averagingFilter.avgVx;
-    x[10] = radians(averagingFilter.avgWy);
-    // x[10] = 0;
-  }
+  // // when flapping, use cycle-averaged estimator, if enabled
+  // if (flappingConfig.useAveragingFilter == 1) {
+  //   // x[0] = averagingFilter.avgX;
+  //   // x[4] = radians(averagingFilter.avgPitch);
+  //   // x[6] = averagingFilter.avgVx;
+  //   x[10] = radians(averagingFilter.avgWy);
+  //   // x[10] = 0;
+
+  //   // change the control gains to be more aggressive
+  //   // self->k1[4] = 0.5;
+  //   // self->k2[4] = 0.5;
+  //   self->k1[10] = 0.10f;
+  //   self->k2[10] = 0.10f;
+  // }
+  // else {
+  //   // the original control signal
+  //   self->k1[10] = 0.10f;
+  //   self->k2[10] = 0.10f;
+  //   // self->k1[10] = 0.06230944f;
+  //   // self->k2[10] = 0.06230944f;
+  // }
 
   float xd[12] = {0};
 
@@ -493,13 +557,13 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     for (int i = 0; i < 12; i++) {
       tmp += -self->k3[i] * (x[i] - xd[i]);
     }
-    control->motorLeft_N = tmp + 9.81f*self->mass/2.0f;
+    control->motorLeft_N = tmp + thrustOffsetN;
     
     tmp = 0;
     for (int i = 0; i < 12; i++) {
       tmp += -self->k4[i] * (x[i] - xd[i]);
     }
-    control->motorRight_N = tmp + 9.81f*self->mass/2.0f;
+    control->motorRight_N = tmp + thrustOffsetN;
   }
 
   // logging

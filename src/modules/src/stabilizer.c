@@ -53,6 +53,13 @@
 // delete me at some point?
 #include "bicopterdeck.h"
 
+// delete me at some point
+// from servo_history.c
+// #include "servo_history.c"
+extern const unsigned int servoHistoryLength;
+extern const float servoLeftHistory[];
+extern const float servoRightHistory[];
+
 #include "estimator.h"
 #include "usddeck.h"
 #include "quatcompress.h"
@@ -356,115 +363,47 @@ static void stabilizerTask(void* param)
 
       controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
-      // if the battery voltage drops to a critical level, stop the motors
-      // float batteryVoltage = pmGetBatteryVoltage();
-      // if (batteryVoltage < DEFAULT_BAT_CRITICAL_LOW_VOLTAGE && !hasReachedCriticalBatteryLevel) {
-      //   DEBUG_PRINT("Battery voltage critical (%f), stopping motors\n. Reboot required.", (double)batteryVoltage);
-      //   hasReachedCriticalBatteryLevel = true;
+      // // October 7th, 2025 - replay the servo angles on the ati mini
+      // if (areMotorsAllowedToRun) {
+      //   if (count == 0) DEBUG_PRINT("motors are allowed to run\n");
+      //   control.motorLeft_N = 0.0f;
+      //   control.motorRight_N = 0.0f;
+      //   control.servoLeft_deg = 0;
+      //   control.servoRight_deg = 0;
+
+      //   // pulse the motors twice
+      //   if ((count >= 0 && count < 500) || (count >= 1000 && count < 1500))  {
+      //     control.motorLeft_N = 1.0f;
+      //     control.motorRight_N = 1.0f;
+      //   }
+      //   else if (count >= 2000 && count < 2000 + 10*servoHistoryLength) {
+      //     control.servoLeft_deg = servoLeftHistory[count/10-200];
+      //     control.servoRight_deg = servoRightHistory[count/10-200];
+      //     if (count == 2000) DEBUG_PRINT("servoLeftHistory[0] = %f \n", control.servoLeft_deg);
+      //   }
+      //   count++;
+
+      //   controlMotors(&control);
+      // }
+      // else {
+      //   motorsStop();
+      //   count = 0;
       // }
 
-      // // Critical for safety, be careful if you modify this code!
-      // // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
+      // if the battery voltage drops to a critical level, stop the motors
+      float batteryVoltage = pmGetBatteryVoltage();
+      if (batteryVoltage < DEFAULT_BAT_CRITICAL_LOW_VOLTAGE && !hasReachedCriticalBatteryLevel) {
+        DEBUG_PRINT("Battery voltage critical (%f), stopping motors\n. Reboot required.", (double)batteryVoltage);
+        hasReachedCriticalBatteryLevel = true;
+      }
 
-        // wait 3 seconds before allowing the propellers to spin
-        // count++;
-        // if (count < 3000) {
-        //   control.motorLeft_N = 0.0f;
-        //   control.motorRight_N = 0.0f;
-        // }
-        // else {
-        //   control.motorLeft_N = 0.0f;
-        //   control.motorRight_N = 1.0f;
-        // }
-        
+      // Critical for safety, be careful if you modify this code!
+      // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
+      if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
         controlMotors(&control);
       } else {
         motorsStop();
-        // count = 0;
       }
-
-      // sweep experiment
-      // if (runTest) {
-      //   uint16_t step = 10;
-      //   uint16_t ratio = 800 + (step*(count/1000)) % (2200-800+step);
-      //   motorsSetRatio(MOTOR_M2, ratio);
-      //   motorsSetRatio(MOTOR_M3, ratio);
-      //   count++;
-      // }
-      // else {
-      //   motorsSetRatio(MOTOR_M2, 1500);
-      //   motorsSetRatio(MOTOR_M3, 1500);
-      //   count = 0;
-      // }
-
-      // set response experiment (runTest will tell us how many degrees to go up)
-      // if (runTest) {
-
-      //   uint16_t ratio = 1500;
-      //   switch (count/2000) {
-      //     case 0: ratio += 10; break;
-      //     case 2: ratio += 20; break;
-      //     case 4: ratio += 40; break;
-      //     case 6: ratio += 80; break;
-      //     case 8: ratio += 160; break;
-      //     case 10: ratio += 320; break;
-      //     case 12: ratio += 640; break;
-      //     default: ratio = 1500; break;
-      //   }
-      //   motorsSetRatio(MOTOR_M2, ratio);
-      //   motorsSetRatio(MOTOR_M3, ratio);
-      //   count++;
-      // }
-      // else {
-      //   motorsSetRatio(MOTOR_M2, 1500);
-      //   motorsSetRatio(MOTOR_M3, 1500);
-      //   count = 0;
-      // }
-
-      // experiment 3: flapping frequency response
-      // use the ratio as the frequency in Hz
-      // test will run for 15 seconds
-      // if (runTest) {
-      //   uint16_t base = 1500;
-      //   uint16_t amplitude = 20*10.277; // 20 deg
-      //   float frequencyHz = 0.0f; // how many full cycles per second
-      //   if (count < 3000) {
-      //     frequencyHz = 5.0f;
-      //   }
-      //   else if (count < 6000) {
-      //     frequencyHz = 10.0f;
-      //   }
-      //   else if (count < 9000) {
-      //     frequencyHz = 15.0f;
-      //   }
-      //   else if (count < 12000) {
-      //     frequencyHz = 20.0f;
-      //   }
-      //   else {
-      //     frequencyHz = 25.0f;
-      //   }
-      //   uint16_t ratio = base + amplitude * sinf(2.0f * (float)M_PI * frequencyHz * (float)count / 1000.0f);
-      //   uint16_t ratio3 = base - amplitude * sinf(2.0f * (float)M_PI * frequencyHz * (float)count / 1000.0f);
-      //   motorsSetRatio(MOTOR_M2, ratio); // left servo
-      //   motorsSetRatio(MOTOR_M3, ratio3);
-      //   count++;
-      //   if (count >= 15000) {
-      //     runTest = 0; // stop after 15 seconds
-      //   }
-      // }
-      // else {
-      //   motorsSetRatio(MOTOR_M2, 1500);
-      //   motorsSetRatio(MOTOR_M3, 1500);
-      //   count = 0;
-      // }
-
-      // print the thrust and battery voltage every 1 second
-      // count++;
-      // count %= 1000;
-      // if (count == 0) {
-      //   DEBUG_PRINT("Fz: %0.4f Batt: %0.3f CMD: %0.2f\n", (double)control.Fz, (double)pmGetBatteryVoltage(), (double)motorPwm.motors.m1);
-      // }
 
       // Compute compressed log formats
       compressState();
