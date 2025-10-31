@@ -189,6 +189,7 @@ static void powerDistributionWrench(const control_t *control, motors_thrust_unca
     // Not implemented yet
 }
 
+static int leftServoUS, rightServoUS;
 static void powerDistributionLQR(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
     // get the desired force to be produced by each motor
     float m1_force = control->motorRight_N * bicopterConfig.rightMotorTrim;
@@ -200,6 +201,10 @@ static void powerDistributionLQR(const control_t *control, motors_thrust_uncappe
     // left and right servos
     motorThrustUncapped->motors.m2 = leftServoDegToMicroseconds(control->servoLeft_deg);
     motorThrustUncapped->motors.m3 = rightServoDegToMicroseconds(control->servoRight_deg);
+
+    leftServoUS = motorThrustUncapped->motors.m2;
+    rightServoUS = motorThrustUncapped->motors.m3;
+
 }
 
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
@@ -267,6 +272,18 @@ float powerDistributionGetMaxThrust() {
     // maximum thrust per motor (70% pwm at nominal voltage in Newtons)
     return 5.0f;
 }
+
+LOG_GROUP_START(powerDist)
+
+/**
+ * @brief Left servo PWM in microseconds
+ */
+LOG_ADD(LOG_INT32, leftServoUS, &leftServoUS)
+/**
+ * @brief Right servo PWM in microseconds
+ */
+LOG_ADD(LOG_INT32, rightServoUS, &rightServoUS)
+LOG_GROUP_STOP(powerDist)
 
 /**
  * Power distribution parameters

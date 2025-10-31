@@ -843,7 +843,7 @@ static const MotorPerifDef MOTORS_PB8_TIM4_CH3_SERVO =
     .tim           = TIM4,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM4_STOP,
-    .timPeriod     = 5000-1,   // 5 ms period = 200 Hz
+    .timPeriod     = 3030-1,   // 5 ms period = 200 Hz
     .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
@@ -865,7 +865,7 @@ static const MotorPerifDef MOTORS_PB5_TIM3_CH2_SERVO =
     .tim           = TIM3,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM3_STOP,
-    .timPeriod     = 5000-1,   // 5 ms period = 200 Hz
+    .timPeriod     = 3030-1,   // 330 Hz = 3.030 ms
     .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
