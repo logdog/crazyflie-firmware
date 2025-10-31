@@ -433,10 +433,42 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
 
     // determine what the offset should be (based upon the servo amplitude)
+    /*
+    What is the mean vz value and servo amplitude for various u_delta signals?
+                 5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
+                5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
+      vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
+      delta        12      24      35      42      8      15      19      4       9
+    */
     int servoAmplitudeDeg = 0;
-    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
-      // 5Hz, 20 deg causes 40 degree servo amplitude control signals (confirmed in prior test)
-      servoAmplitudeDeg = 40;
+
+    // implement the table above
+    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      servoAmplitudeDeg = 12;
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      servoAmplitudeDeg = 24;
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
+      servoAmplitudeDeg = 35;
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
+      servoAmplitudeDeg = 42;
+    }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      servoAmplitudeDeg = 8;
+    }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      servoAmplitudeDeg = 15;
+    }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
+      servoAmplitudeDeg = 19;
+    }
+    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      servoAmplitudeDeg = 4;
+    }
+    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      servoAmplitudeDeg = 9;
     }
 
     thrustOffsetN = (self->mass * 9.81f / 2.0f) * safeInterpolate(1.0f, besselMultiplier[servoAmplitudeDeg], RAMP_TIME_MS, timeElapsed);
@@ -541,13 +573,42 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   // when flapping, the z-velocity will oscillate around some biased, negative value.
   // To account for this, we simply add in this bias term, which we discovered by 
   // logging the z-velocity estimate when flapping at a constant z position.
+  /*
+    What is the mean vz value and servo amplitude for various u_delta signals?
+                 5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
+                5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
+      vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
+      delta        12      24      35      42      8      15      19      4       9
+  */
   if (flappingConfig.state == enabled) {
-    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
-      x[8] += safeInterpolate(0, 0.30f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      x[8] += safeInterpolate(0, 0.03f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      x[8] += safeInterpolate(0, 0.10f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
+      x[8] += safeInterpolate(0, 0.24f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
+      x[8] += safeInterpolate(0, 0.27f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
     }
     else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
       x[8] += safeInterpolate(0, 0.03f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
     }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
+      x[8] += safeInterpolate(0, 0.04f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
+      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    
   }
 
   // // when flapping, use cycle-averaged estimator, if enabled
