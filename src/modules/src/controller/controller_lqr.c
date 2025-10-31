@@ -392,6 +392,8 @@ static inline bool isClose(float a, float b) {
   return fabs(a-b) < 0.1;
 }
 
+static 
+
 void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
@@ -480,51 +482,49 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   if (flappingConfig.state == demo5) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
 
-    float amplitude = 0.0f;
-    float hz = 5.0f;
+    flappingConfig.hz = 5.0f;
     if (timeElapsed < 5000) {
-      amplitude = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
+      flappingConfig.amplitudeDeg = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
     }
-    else if (timeElapsed < 1000) {
-      amplitude = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
+    else if (timeElapsed < 10000) {
+      flappingConfig.amplitudeDeg = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
     }
     else if (timeElapsed < 15000) {
-      amplitude = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
+      flappingConfig.amplitudeDeg = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
     }
     else if (timeElapsed < 20000) {
-      amplitude = safeInterpolate(15.0f, 20.0f, RAMP_TIME_MS, timeElapsed - 15000);
+      flappingConfig.amplitudeDeg = safeInterpolate(15.0f, 20.0f, RAMP_TIME_MS, timeElapsed - 15000);
     }
     else if (timeElapsed < 25000) {
-      amplitude = 0.0f;
+      flappingConfig.amplitudeDeg = 0.0f;
     }
     else {
       flappingConfig.state = demo10;
       flappingConfig.lastTick = tick;
     }
-    flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*hz*timeElapsed/1000.0f);
+    flappingAngleOffsetDeg = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
   }
   if (flappingConfig.state == demo10) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
 
-    float amplitude = 0.0f;
-    float hz = 10.0f;
+    flappingConfig.hz = 10.0f;
     if (timeElapsed < 5000) {
-      amplitude = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
+      flappingConfig.amplitudeDeg = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
     }
-    else if (timeElapsed < 1000) {
-      amplitude = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
+    else if (timeElapsed < 10000) {
+      flappingConfig.amplitudeDeg = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
     }
     else if (timeElapsed < 15000) {
-      amplitude = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
+      flappingConfig.amplitudeDeg = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
     }
     else if (timeElapsed < 20000) {
-      amplitude = 0.0f;
+      flappingConfig.amplitudeDeg = 0.0f;
     }
     else {
       flappingConfig.state = demo15;
       flappingConfig.lastTick = tick;
     }
-    flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*hz*timeElapsed/1000.0f);
+    flappingAngleOffsetDeg = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
   }
   if (flappingConfig.state == demo15) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
