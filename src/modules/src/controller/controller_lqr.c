@@ -71,19 +71,35 @@ static controllerLQR_t g_self = {
 // 2. tune the thrusters so that z error is minimal (did this)
 // 3. add in the bessel function multiplier for flapping (it actually over-compensates a bit)
 static controllerLQR_t g_self = {
-  .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
+//   .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
+//          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
+
+// .k2 = {0.09149180f, 0.00926999f, -0.00000000f,
+//          -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, 0.00000000f, -0.00733346f, 0.06230944f, 0.04034881f},
+
+//   .k3 = {0.00000000f, -0.89836564f, 2.14498959f,
+//         //  4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 2.42921273f, 0.39774998f, 0.00000000f, 0.01305347f},
+//          4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 1.0f, 0.39774998f, 0.00000000f, 0.01305347f},
+
+
+//   .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
+//         //  -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
+//          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 1.0f, -0.39774998f, 0.00000000f, -0.01305347f},
+
+.k1 = {0.09149180f, -0.00926999f, 0.00000000f,
          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
 
-  .k2 = {0.09149180f, 0.00926999f, -0.00000000f,
-         -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, 0.00000000f, -0.00733346f, 0.06230944f, 0.04034881f},
+  .k2 = {0.09149180f, 0.00926999f, 0.00000000f,
+         -0.04898391f, 0.57753220f, 0.21136620f, 0.13835939f, 0.01162586f, -0.00000000f, -0.00733346f, 0.06230944f, 0.04034881f},
 
-  .k3 = {0.00000000f, -0.89836564f, 2.14498959f,
-         4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 2.42921273f, 0.39774998f, 0.00000000f, 0.01305347f},
+  .k3 = {0.00000000f, -0.89836564f, 2.18637896f,
+         4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 1.34283501f, 0.39774998f, 0.00000000f, 0.01305347f},
 
-  .k4 = {0.00000000f, 0.89836564f, 2.14498959f,
-         -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
+  .k4 = {0.00000000f, 0.89836564f, 2.18637896f,
+         -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 1.34283501f, -0.39774998f, 0.00000000f, -0.01305347f},
 
-  .mass = 0.60610744f
+  // .mass = 0.60610744f
+  .mass = 0.593f
 };
 
 // static controllerLQR_t g_self = {
@@ -171,40 +187,70 @@ struct flappingConfig_s flappingConfig = {
 };
 
 // 1/J_0(a*pi/180) where J_0 is the 0th order Bessel function of the first kind
-// precomputed for a = 0, 1, 2, ..., 30 Deg
+// precomputed for a = 0, 1, 2, ..., 60 Deg
 // This is used to account for the loss of cycle-averaged thrust due to servo oscillations
 static float besselMultiplier[] = {
-  1.0f,         // 0 deg
-  1.00010001f,
-  1.00030009f,
-  1.00070049f,
-  1.001201442f,
-  1.001903617f,
-  1.00270731f,
-  1.003713741f,
-  1.004924128f,
-  1.00623868f,
-  1.007658202f,
-  1.009285426f,
-  1.011020119f,
-  1.012965964f,
-  1.015125368f,
-  1.017397497f,
-  1.019783806f,
-  1.022390349f,
-  1.025115325f,
-  1.028066207f,
-  1.031140441f,
-  1.034447088f,
-  1.037882719f,
-  1.041558171f,
-  1.045369015f,
-  1.049317943f,
-  1.053518753f,
-  1.057977148f,
-  1.062473438f,
-  1.067235859f,
-  1.07227107f,  // 30 deg
+        1.000000f, // 0 deg
+        1.000080f, // 1 deg
+        1.000300f, // 2 deg
+        1.000690f, // 3 deg
+        1.001220f, // 4 deg
+        1.001910f, // 5 deg
+        1.002750f, // 6 deg
+        1.003740f, // 7 deg
+        1.004890f, // 8 deg
+        1.006200f, // 9 deg
+        1.007660f, // 10 deg
+        1.009280f, // 11 deg
+        1.011060f, // 12 deg
+        1.013000f, // 13 deg
+        1.015100f, // 14 deg
+        1.017360f, // 15 deg
+        1.019780f, // 16 deg
+        1.022380f, // 17 deg
+        1.025140f, // 18 deg
+        1.028070f, // 19 deg
+        1.031170f, // 20 deg
+        1.034450f, // 21 deg
+        1.037900f, // 22 deg
+        1.041540f, // 23 deg
+        1.045350f, // 24 deg
+        1.049350f, // 25 deg
+        1.053540f, // 26 deg
+        1.057920f, // 27 deg
+        1.062500f, // 28 deg
+        1.067270f, // 29 deg
+        1.072240f, // 30 deg
+        1.077420f, // 31 deg
+        1.082810f, // 32 deg
+        1.088410f, // 33 deg
+        1.094230f, // 34 deg
+        1.100270f, // 35 deg
+        1.106550f, // 36 deg
+        1.113050f, // 37 deg
+        1.119800f, // 38 deg
+        1.126790f, // 39 deg
+        1.134020f, // 40 deg
+        1.141520f, // 41 deg
+        1.149280f, // 42 deg
+        1.157310f, // 43 deg
+        1.165620f, // 44 deg
+        1.174220f, // 45 deg
+        1.183100f, // 46 deg
+        1.192290f, // 47 deg
+        1.201800f, // 48 deg
+        1.211620f, // 49 deg
+        1.221770f, // 50 deg
+        1.232260f, // 51 deg
+        1.243100f, // 52 deg
+        1.254300f, // 53 deg
+        1.265880f, // 54 deg
+        1.277850f, // 55 deg
+        1.290210f, // 56 deg
+        1.302990f, // 57 deg
+        1.316200f, // 58 deg
+        1.329850f, // 59 deg
+        1.343960f, // 60 deg
 };
 
 // set the previous last value
@@ -342,13 +388,15 @@ static inline float safeInterpolate(float startValue, float endValue, float dura
   return startValue + (endValue-startValue)*time/duration;
 }
 
+static inline bool isClose(float a, float b) {
+  return fabs(a-b) < 0.1;
+}
 
 void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick)
 {
-  control->controlMode = controlModeLQR;
   // runs at 1 kHz
   // updateAveragingFilter(sensors, state, tick);
 
@@ -373,32 +421,48 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     flappingConfig.lastTick = tick;
   }
 
+  // When flapping is enabled, we must set the flappingAngleOffSetDeg and thrustOffsetN.
+  // flappingAngleOffSetDeg will ramp from 0 to flappingConfig.amplitudeDeg over RAMP_TIME_MS milliseconds.
+  // thrustOffsetN will be mg/(2J(a)) where a is the amplitude of the servo command signal, which
+  // varies based the flappingConfig.hz and the flappingConfig.amplitudeDeg. We use a lookup table
+  // to determine what the value of a based on flappingConfig.hz and flappingConfig.amplitudeDeg.
   if (flappingConfig.state == enabled) {
     int timeElapsed = tick - flappingConfig.lastTick;
-    // ramp up for RAMP_TIME_MS and then remain at flappingConfig.amplitudeDeg
+    // ramp up for RAMP_TIME_MS and then remain at flappingConfig.amplitudeDeg.
     float amplitude = safeInterpolate(0, flappingConfig.amplitudeDeg, RAMP_TIME_MS, timeElapsed);
     flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
+
+    // determine what the offset should be (based upon the servo amplitude)
+    int servoAmplitudeDeg = 0;
+    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
+      // 5Hz, 20 deg causes 40 degree servo amplitude control signals (confirmed in prior test)
+      servoAmplitudeDeg = 40;
+    }
+
+    thrustOffsetN = (self->mass * 9.81f / 2.0f) * safeInterpolate(1.0f, besselMultiplier[servoAmplitudeDeg], RAMP_TIME_MS, timeElapsed);
   }
 
-  // 5 Hz demo
+  // This section covers a hard-coded demo which we use to create a nice video for the paper.
+  // The order goes 5 Hz at 5, 10, 15, 20 deg; 10 Hz at 5, 10, 15 deg; 15 Hz at 5, 10 deg.
+  // This is accomplished autonomously when the flappinConfig.state is set to demo5
   if (flappingConfig.state == demo5) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
 
     float amplitude = 0.0f;
     float hz = 5.0f;
-    if (timeElapsed < 3000) {
+    if (timeElapsed < 5000) {
       amplitude = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
     }
-    else if (timeElapsed < 6000) {
-      amplitude = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 3000);
-    }
-    else if (timeElapsed < 9000) {
-      amplitude = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 6000);
+    else if (timeElapsed < 1000) {
+      amplitude = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
     }
     else if (timeElapsed < 15000) {
-      amplitude = safeInterpolate(15.0f, 20.0f, RAMP_TIME_MS, timeElapsed - 9000);
+      amplitude = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
     }
     else if (timeElapsed < 20000) {
+      amplitude = safeInterpolate(15.0f, 20.0f, RAMP_TIME_MS, timeElapsed - 15000);
+    }
+    else if (timeElapsed < 25000) {
       amplitude = 0.0f;
     }
     else {
@@ -407,8 +471,6 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     }
     flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*hz*timeElapsed/1000.0f);
   }
-
-  // 10 Hz demo
   if (flappingConfig.state == demo10) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
 
@@ -432,8 +494,6 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     }
     flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*hz*timeElapsed/1000.0f);
   }
-
-  // 15 Hz demo
   if (flappingConfig.state == demo15) {
     int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
 
@@ -476,6 +536,19 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   // x[9] = 0;
   // x[10] = 0;
   // x[11] = 0;
+
+  // Due to the location of the accelerometer being offset a distance from the center of mass,
+  // when flapping, the z-velocity will oscillate around some biased, negative value.
+  // To account for this, we simply add in this bias term, which we discovered by 
+  // logging the z-velocity estimate when flapping at a constant z position.
+  if (flappingConfig.state == enabled) {
+    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
+      x[8] += safeInterpolate(0, 0.30f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
+      x[8] += safeInterpolate(0, 0.03f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
+    }
+  }
 
   // // when flapping, use cycle-averaged estimator, if enabled
   // if (flappingConfig.useAveragingFilter == 1) {
@@ -584,6 +657,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
 
 
   // Original LQR Controller
+  control->controlMode = controlModeLQR;
   // u = -K(x - x_desired) + ue
   float tmp = 0;
   for (int i = 0; i < 12; i++) {
@@ -610,6 +684,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
     tmp += -self->k4[i] * (x[i] - xd[i]);
   }
   control->motorRight_N = tmp + thrustOffsetN;
+
 
   // logging
   leftMotor = control->motorLeft_N;
