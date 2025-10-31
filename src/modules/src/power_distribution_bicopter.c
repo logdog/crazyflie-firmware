@@ -66,8 +66,8 @@ struct bicopterConfig_s bicopterConfig = {
     .leftServoTrim = 85,
     .rightServoTrim = 60,
 #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-    .leftServoTrim = 0,
-    .rightServoTrim = 0,
+    .leftServoTrim = 60,
+    .rightServoTrim = 90,
 #else
 #error "MELONCOPTER or REDCOPTER must be selected"
 #endif
