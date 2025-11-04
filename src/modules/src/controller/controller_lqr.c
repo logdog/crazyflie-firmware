@@ -392,7 +392,6 @@ static inline bool isClose(float a, float b) {
   return fabs(a-b) < 0.1;
 }
 
-static 
 
 void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
