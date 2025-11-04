@@ -10,15 +10,15 @@
 #include "debug.h"
 #include "config.h"
 
-extern const unsigned int fh_lqr_max_index;
-extern const float u0[];
-extern const float k0[];
-extern const float x0[];
-extern const float K[];
-float get_u0(unsigned int sample_index, unsigned int state_index) { return u0[4*sample_index + state_index]; }
-float get_k0(unsigned int sample_index, unsigned int state_index) { return k0[4*sample_index + state_index]; }
-float get_x0(unsigned int sample_index, unsigned int state_index) { return x0[12*sample_index + state_index]; }
-float get_K(unsigned int sample_index, unsigned int row, unsigned int col) { return K[48*sample_index + 12*row + col]; }
+// extern const unsigned int fh_lqr_max_index;
+// extern const float u0[];
+// extern const float k0[];
+// extern const float x0[];
+// extern const float K[];
+// float get_u0(unsigned int sample_index, unsigned int state_index) { return u0[4*sample_index + state_index]; }
+// float get_k0(unsigned int sample_index, unsigned int state_index) { return k0[4*sample_index + state_index]; }
+// float get_x0(unsigned int sample_index, unsigned int state_index) { return x0[12*sample_index + state_index]; }
+// float get_K(unsigned int sample_index, unsigned int row, unsigned int col) { return K[48*sample_index + 12*row + col]; }
 
 #if defined(CONFIG_BATTERY_550)
 static controllerLQR_t g_self = {
@@ -146,44 +146,26 @@ bool controllerLQRTest(controllerLQR_t* self)
   return true;
 }
 
-// parameters (can be set over the air via the crazyflie radio)
-enum LQR_MODES {
-  DEFAULT = 0,          // infinite horizon, default controller
-  FINITE_HORIZON = 1,   // finite horizon controller (not working)
-  MANUAL_ROLL = 2,      // set absolute roll angle
-  MANUAL_PITCH = 4,     // set absolute pitch angle
-  MANUAL_Z_RATE = 8,    // set absolute (inertial frame) z velocity
-};
-
-static uint8_t lqr_mode = DEFAULT;
-
 // flapping parameters
 struct flappingConfig_s {
     enum flappingMode_s {
       disabled = 0,
-      waitToEnable = 1,
-      enabled = 3,
-      waitToDisable = 4,
-      
-      // the demos for 5hz, 10hz, 15hz
-      waitToDemo = 5,
-      demo5,
-      demo10,
-      demo15
-
+      enabled = 1,
     } state;
     float hz;
     float amplitudeDeg;
-    uint32_t lastTick;
-    uint8_t useAveragingFilter;
 };
 
-struct flappingConfig_s flappingConfig = {
+struct flappingConfig_s flappingConfig1 = {
   .state = disabled,
-  .hz = 10,
-  .amplitudeDeg = 10,
-  .lastTick = 0,
-  .useAveragingFilter = 0,
+  .hz = 5,
+  .amplitudeDeg = 20,
+};
+
+struct flappingConfig_s flappingConfig2 = {
+  .state = disabled,
+  .hz = 5,
+  .amplitudeDeg = 20,
 };
 
 // 1/J_0(a*pi/180) where J_0 is the 0th order Bessel function of the first kind
@@ -252,10 +234,6 @@ static float besselMultiplier[] = {
         1.329850f, // 59 deg
         1.343960f, // 60 deg
 };
-
-// set the previous last value
-static float lastServoLeftDeg = 0.0f;
-static float lastServoRightDeg = 0.0f;
 
 // logging variables
 static float px, py, pz;
@@ -392,347 +370,135 @@ static inline bool isClose(float a, float b) {
   return fabs(a-b) < 0.1;
 }
 
-static 
+/*
+Due to the location of the accelerometer being offset a distance from the center of mass,
+when flapping, the z-velocity will oscillate around some biased, negative value.
+To account for this, we simply add in this bias term, which we discovered by 
+logging the z-velocity estimate when flapping at a constant z position.
+             5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
+            5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
+  vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
+*/
+static float vzLUT(float w_hz, float a_deg) {
+  float vz = 0.0;
+  if (isClose(w_hz, 5.0f) && isClose(a_deg, 5.0f)) {
+    vz = -0.03f;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 10.0f)) {
+    vz = -0.10f;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 15.0f)) {
+    vz = -0.24f;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 20.0f)) {
+    vz = -0.27f;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 5.0f)) {
+    vz = -0.01f;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 10.0f)) {
+    vz = -0.03f;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 15.0f)) {
+    vz = -0.04f;
+  }
+  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 5.0f)) {
+    vz = -0.01f;
+  }
+  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 10.0f)) {
+    vz = -0.01f;
+  }
+  return vz;
+}
 
-void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
+/*
+As discussed in paper, beta is needed to calcualte Phi, the thrust offset.
+  w_hz        5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
+  a_deg      5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
+  beta (deg)    12      24      35      42      8      15      19      4       9
+*/
+static int betaLUT(float w_hz, float a_deg) {
+  int beta = 0;
+  if (isClose(w_hz, 5.0f) && isClose(a_deg, 5.0f)) {
+    beta = 12;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 10.0f)) {
+    beta = 24;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 15.0f)) {
+    beta = 35;
+  }
+  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 20.0f)) {
+    beta = 42;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 5.0f)) {
+    beta = 8;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 10.0f)) {
+    beta = 15;
+  }
+  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 15.0f)) {
+    beta = 19;
+  }
+  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 5.0f)) {
+    beta = 4;
+  }
+  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 10.0f)) {
+    beta = 9;
+  }
+  return beta;
+}
+
+
+// controller runs at 100 Hz (should only be called every 10 ms)
+float controlHelper(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
-                                         const uint32_t tick)
+                                         const uint32_t tick,
+                                         const struct flappingConfig_s *flapConfig)
 {
-  // runs at 1 kHz
-  // updateAveragingFilter(sensors, state, tick);
-
-  // add the flapping control signal
-  float flappingAngleOffsetDeg = 0.0f;
-  float thrustOffsetN = self->mass * 9.81f / 2.0f;
-  
-  // State Machine Transition Rules:
-  // 1. The flappingConfig.state will be set to "waitToEnable", "waitToDisable" (or "disable")
-  //    via the parameter `ctrlLQR.flap_mode`
-  // 2. Only transition to start/stop flapping at whole second increments
-  // 3. The rampingUp state will last `RAMP_TIME_MS` milliseconds
-  if (flappingConfig.state == waitToEnable && (tick % 1000) == 0) {
-    flappingConfig.state = enabled;
-    flappingConfig.lastTick = tick;
-  }
-  else if (flappingConfig.state == waitToDisable && (tick % 1000) == 0) {
-    flappingConfig.state = disabled;
-  }
-  else if (flappingConfig.state == waitToDemo && (tick % 1000) == 0) {
-    flappingConfig.state = demo5;
-    flappingConfig.lastTick = tick;
-  }
-
-  // When flapping is enabled, we must set the flappingAngleOffSetDeg and thrustOffsetN.
-  // flappingAngleOffSetDeg will ramp from 0 to flappingConfig.amplitudeDeg over RAMP_TIME_MS milliseconds.
+  // forcing function produces flappingAngleOffsetDeg and thrustOffsetN.
   // thrustOffsetN will be mg/(2J(a)) where a is the amplitude of the servo command signal, which
   // varies based the flappingConfig.hz and the flappingConfig.amplitudeDeg. We use a lookup table
   // to determine what the value of a based on flappingConfig.hz and flappingConfig.amplitudeDeg.
-  if (flappingConfig.state == enabled) {
-    int timeElapsed = tick - flappingConfig.lastTick;
-    // ramp up for RAMP_TIME_MS and then remain at flappingConfig.amplitudeDeg.
-    float amplitude = safeInterpolate(0, flappingConfig.amplitudeDeg, RAMP_TIME_MS, timeElapsed);
-    flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
-
-    // determine what the offset should be (based upon the servo amplitude)
-    /*
-    What is the mean vz value and servo amplitude for various u_delta signals?
-                 5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
-                5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
-      vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
-      delta        12      24      35      42      8      15      19      4       9
-    */
-    int servoAmplitudeDeg = 0;
-
-    // implement the table above
-    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      servoAmplitudeDeg = 12;
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      servoAmplitudeDeg = 24;
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
-      servoAmplitudeDeg = 35;
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
-      servoAmplitudeDeg = 42;
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      servoAmplitudeDeg = 8;
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      servoAmplitudeDeg = 15;
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
-      servoAmplitudeDeg = 19;
-    }
-    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      servoAmplitudeDeg = 4;
-    }
-    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      servoAmplitudeDeg = 9;
-    }
-
-    thrustOffsetN = (self->mass * 9.81f / 2.0f) * safeInterpolate(1.0f, besselMultiplier[servoAmplitudeDeg], RAMP_TIME_MS, timeElapsed);
+  float flappingAngleOffsetDeg = 0.0f;
+  float thrustOffsetN = self->mass * 9.81f / 2.0f;
+  if (flapConfig->state == enabled) {
+    flappingAngleOffsetDeg = flapConfig->amplitudeDeg * sinf(2*(float)M_PI*flapConfig->hz*tick/1000.0f);
+    int beta = betaLUT(flapConfig->hz, flapConfig->amplitudeDeg);
+    thrustOffsetN = (self->mass * 9.81f / 2.0f) * besselMultiplier[beta];
   }
-
-  // This section covers a hard-coded demo which we use to create a nice video for the paper.
-  // The order goes 5 Hz at 5, 10, 15, 20 deg; 10 Hz at 5, 10, 15 deg; 15 Hz at 5, 10 deg.
-  // This is accomplished autonomously when the flappinConfig.state is set to demo5
-  if (flappingConfig.state == demo5) {
-    int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
-
-    flappingConfig.hz = 5.0f;
-    if (timeElapsed < 5000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
-    }
-    else if (timeElapsed < 10000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
-    }
-    else if (timeElapsed < 15000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
-    }
-    else if (timeElapsed < 20000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(15.0f, 20.0f, RAMP_TIME_MS, timeElapsed - 15000);
-    }
-    else if (timeElapsed < 25000) {
-      flappingConfig.amplitudeDeg = 0.0f;
-    }
-    else {
-      flappingConfig.state = demo10;
-      flappingConfig.lastTick = tick;
-    }
-    flappingAngleOffsetDeg = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
-  }
-  if (flappingConfig.state == demo10) {
-    int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
-
-    flappingConfig.hz = 10.0f;
-    if (timeElapsed < 5000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
-    }
-    else if (timeElapsed < 10000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
-    }
-    else if (timeElapsed < 15000) {
-      flappingConfig.amplitudeDeg = safeInterpolate(10.0f, 15.0f, RAMP_TIME_MS, timeElapsed - 10000);
-    }
-    else if (timeElapsed < 20000) {
-      flappingConfig.amplitudeDeg = 0.0f;
-    }
-    else {
-      flappingConfig.state = demo15;
-      flappingConfig.lastTick = tick;
-    }
-    flappingAngleOffsetDeg = flappingConfig.amplitudeDeg * sinf(2*(float)M_PI*flappingConfig.hz*timeElapsed/1000.0f);
-  }
-  if (flappingConfig.state == demo15) {
-    int timeElapsed = tick - flappingConfig.lastTick; // elapsed time in ms
-
-    float amplitude = 0.0f;
-    float hz = 15.0f;
-    if (timeElapsed < 5000) {
-      amplitude = safeInterpolate(0, 5.0f, RAMP_TIME_MS, timeElapsed);
-    }
-    else if (timeElapsed < 10000) {
-      amplitude = safeInterpolate(5.0f, 10.0f, RAMP_TIME_MS, timeElapsed - 5000);
-    }
-    else if (timeElapsed < 15000) {
-      amplitude = 0.0f;
-    }
-    else {
-      flappingConfig.state = disabled;
-    }
-    flappingAngleOffsetDeg = amplitude * sinf(2*(float)M_PI*hz*timeElapsed/1000.0f);
-
-    //   uint8_t a_deg = (uint8_t) roundf(fabsf(multiplier * flappingConfig.amplitudeDeg));
-    //   if (a_deg >= 0 && a_deg <= 30) { 
-    //     thrustOffsetN = (self->mass * 9.81f / 2.0f) * besselMultiplier[a_deg]; 
-    //   }
-  }
-
-  if (!RATE_DO_EXECUTE(RATE_100_HZ, tick)) {
-    // update the servos at 1kHz
-    control->servoLeft_deg = flappingAngleOffsetDeg + lastServoLeftDeg;   // when not flapping: 0 deg
-    control->servoRight_deg = flappingAngleOffsetDeg + lastServoRightDeg; // when not flapping: 0 deg
-    return;
-  }
-  
-  // LQR controller runs at 100 Hz
 
   // current state
   float x[12] = {state->position.x, state->position.y, state->position.z,
                  radians(state->attitude.roll), -radians(state->attitude.pitch), radians(state->attitude.yaw),
                  state->velocity.x, state->velocity.y, state->velocity.z,
                  radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z)};
-  // x[9] = 0;
-  // x[10] = 0;
-  // x[11] = 0;
-
-  // Due to the location of the accelerometer being offset a distance from the center of mass,
-  // when flapping, the z-velocity will oscillate around some biased, negative value.
-  // To account for this, we simply add in this bias term, which we discovered by 
-  // logging the z-velocity estimate when flapping at a constant z position.
-  /*
-    What is the mean vz value and servo amplitude for various u_delta signals?
-                 5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
-                5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
-      vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
-      delta        12      24      35      42      8      15      19      4       9
-  */
-  if (flappingConfig.state == enabled) {
-    if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      x[8] += safeInterpolate(0, 0.03f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      x[8] += safeInterpolate(0, 0.10f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
-      x[8] += safeInterpolate(0, 0.24f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 5.0f) && isClose(flappingConfig.amplitudeDeg, 20.0f)) {
-      x[8] += safeInterpolate(0, 0.27f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      x[8] += safeInterpolate(0, 0.03f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 10.0f) && isClose(flappingConfig.amplitudeDeg, 15.0f)) {
-      x[8] += safeInterpolate(0, 0.04f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 5.0f)) {
-      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    else if (isClose(flappingConfig.hz, 15.0f) && isClose(flappingConfig.amplitudeDeg, 10.0f)) {
-      x[8] += safeInterpolate(0, 0.01f, RAMP_TIME_MS, tick - flappingConfig.lastTick);
-    }
-    
-  }
-
-  // // when flapping, use cycle-averaged estimator, if enabled
-  // if (flappingConfig.useAveragingFilter == 1) {
-  //   // x[0] = averagingFilter.avgX;
-  //   // x[4] = radians(averagingFilter.avgPitch);
-  //   // x[6] = averagingFilter.avgVx;
-  //   x[10] = radians(averagingFilter.avgWy);
-  //   // x[10] = 0;
-
-  //   // change the control gains to be more aggressive
-  //   // self->k1[4] = 0.5;
-  //   // self->k2[4] = 0.5;
-  //   self->k1[10] = 0.10f;
-  //   self->k2[10] = 0.10f;
-  // }
-  // else {
-  //   // the original control signal
-  //   self->k1[10] = 0.10f;
-  //   self->k2[10] = 0.10f;
-  //   // self->k1[10] = 0.06230944f;
-  //   // self->k2[10] = 0.06230944f;
-  // }
-
-
-  // set the desired state, depending on the flight mode
+  
+  // desired state
   float xd[12] = {0};
-  if (setpoint->mode.roll == modeAbs && setpoint->mode.pitch == modeAbs && setpoint->mode.z == modeVelocity) {
-    // althold flight mode. Values set with commander.send_setpoint()
-    xd[0] = x[0];  // x
-    xd[1] = x[1];  // y
-    xd[2] = x[2];  // z
-    xd[3] = radians(setpoint->attitude.roll);
-    xd[4] = -radians(setpoint->attitude.pitch);
-    xd[5] = 0.0f;  // yaw
-    xd[6] = x[6];  // x velocity
-    xd[7] = x[7];  // y velocity
-    xd[8] = setpoint->velocity.z;
-  }
-  else {
-    // original flight mode
-    xd[0] = setpoint->position.x;
-    xd[1] = setpoint->position.y;
-    xd[2] = setpoint->position.z;
+  xd[0] = setpoint->position.x;
+  xd[1] = setpoint->position.y;
+  xd[2] = setpoint->position.z;
+
+  // account for accelerometer bias with LUT when flapping
+  if (flapConfig->state == enabled) {
+    x[8] -= vzLUT(flapConfig->hz, flapConfig->amplitudeDeg);
   }
 
-  // float maxPitch = 20.0f;
-  // if ((setpoint->mode.pitch == modeAbs) && (-maxPitch < setpoint->attitude.pitch) && (setpoint->attitude.pitch < maxPitch)) {
-  //   // eliminate control action due to x position and x velocity errors
-  //   xd[0] = x[0];
-  //   xd[6] = x[6];
-  //   xd[4] = -radians(setpoint->attitude.pitch);
-  // }
-
-  // float maxRoll = 20.0f;
-  // if ((lqr_mode & MANUAL_ROLL) && (-maxRoll < setpoint->attitude.roll && setpoint->attitude.roll < maxRoll)) {
-  //   // eliminate control action due to y position and y velocity errors
-  //   xd[1] = x[1];
-  //   xd[7] = x[7];
-  //   xd[3] = radians(setpoint->attitude.roll);
-  // }
-
-  // // set absolute (inertial frame) z velocity
-  // float maxZRate = 2.0f;
-  // if ((lqr_mode & MANUAL_Z_RATE) && (-maxZRate < setpoint->velocity.z && setpoint->velocity.z < maxZRate)) {
-  //   xd[2] = x[2];
-  //   xd[8] = setpoint->velocity.z;
-  // }
-
-  // for better landing
-  // if (setpoint->mode.z == modeDisable) {
-  //   control->motorLeft_N = 0.0f;
-  //   control->motorRight_N = 0.0f;
-  //   control->servoLeft_deg = 0.0f;
-  //   control->servoRight_deg = 0.0f;
-  //   return;
-  // }
-
-  // if (lqr_mode == FINITE_HORIZON && fh_lqr_count < fh_lqr_max_index) {
-  // // if (false) {
-  //   // FH LQR Controller
-  //   // u = -K(t) (x - x0(t)) - k0(t) + u0(t)
-  //   float tmp[4] = { 0.0f };
-
-  //   for (int row = 0; row < 4; row++) {
-  //     for (int i = 0; i < 12; i++) {
-  //       tmp[row] += -get_K(fh_lqr_count, row, i) * (x[i] - get_x0(fh_lqr_count, i));
-  //     }
-  //     tmp[row] += -get_k0(fh_lqr_count, row);
-  //     tmp[row] += get_u0(fh_lqr_count, row);
-  //   }
-
-  //   control->servoLeft_deg = degrees(tmp[0]);
-  //   control->servoRight_deg = degrees(tmp[1]);
-  //   control->motorLeft_N = tmp[2];
-  //   control->motorRight_N = tmp[3];
-
-  //   // update the counter to step through the trajectory
-  //   fh_lqr_count++;
-    
-  //   // return to the standard infinite horizon LQR controller
-  //   if (fh_lqr_count >= fh_lqr_max_index) {
-  //     lqr_mode = DEFAULT;
-  //     fh_lqr_count = 0;
-  //   }
-  // }
-
-
-  // Original LQR Controller
-  control->controlMode = controlModeLQR;
-  // u = -K(x - x_desired) + ue
+  // implement the LQR control law (with flapping, if enabled)
+  // u = -K(x - x_desired) + ue + u_delta[k]
   float tmp = 0;
   for (int i = 0; i < 12; i++) {
     tmp += -self->k1[i] * (x[i] - xd[i]);
   }
   control->servoLeft_deg = degrees(tmp) + flappingAngleOffsetDeg;
-  lastServoLeftDeg = degrees(tmp);
-  
+
   tmp = 0;
   for (int i = 0; i < 12; i++) {
     tmp += -self->k2[i] * (x[i] - xd[i]);
   }
   control->servoRight_deg = degrees(tmp) + flappingAngleOffsetDeg;
-  lastServoRightDeg = degrees(tmp);
 
   tmp = 0;
   for (int i = 0; i < 12; i++) {
@@ -746,12 +512,157 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   }
   control->motorRight_N = tmp + thrustOffsetN;
 
+  return flappingAngleOffsetDeg;
+}
+
+uint32_t startTick = 0;
+enum LQRControllerState_t {
+  hovering = 0,
+  waiting,
+  flapping
+} lqrControllerState;
+
+// #define FIGURE3
+// #define TABLE3
+
+#if defined(FIGURE3) && defined(TABLE3)
+#error "Cannot create both Figure 3 and Table 3 concurrently"
+#endif
+
+void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
+                                         const sensorData_t *sensors,
+                                         const state_t *state,
+                                         const uint32_t tick)
+{
+  // runs at 1 kHz
+  // updateAveragingFilter(sensors, state, tick);
+
+  if (!RATE_DO_EXECUTE(RATE_100_HZ, tick)) {
+    return;
+  }
+
+  // controller runs at two different frequencies
+  control->controlMode = controlModeLQR;
+
+  // switch from waiting to flapping at whole second increments
+  if (lqrControllerState == waiting && tick % 1000 == 0) {
+    lqrControllerState = flapping;
+    startTick = tick;
+  }
+  // how much time as passed since we entered the flapping state
+  uint32_t elapsedTime = tick - startTick;
+
+  // whichever flapping controller we use must report flappingAngleOffetDeg
+  float flappingAngleOffsetDeg = 0.0f;
+
+// this is the standard controller
+#if !defined(FIGURE3) && !defined(TABLE3)
+  if (lqrControllerState == hovering || lqrControllerState == waiting) {
+      flappingConfig1.state = disabled;
+      flappingConfig2.state = disabled;
+      flappingAngleOffsetDeg = controlHelper(self, control, setpoint, sensors, state, tick, &flappingConfig1);
+  } else {
+    // flapping
+    flappingConfig1.state = disabled;
+    flappingConfig2.state = enabled;
+
+    // u1 is hovering control, u2 is flapping control
+    control_t u1, u2; 
+    float offset1 = controlHelper(self, &u1, setpoint, sensors, state, elapsedTime, &flappingConfig1);
+    float offset2 = controlHelper(self, &u2, setpoint, sensors, state, elapsedTime, &flappingConfig2);
+
+    // as time increases, switch from u1 control (hovering) to u2 control (flapping)
+    float lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime);
+    control->servoLeft_deg = (1-lambda) * u1.servoLeft_deg + lambda * u2.servoLeft_deg;
+    control->servoRight_deg = (1-lambda) * u1.servoRight_deg + lambda * u2.servoRight_deg;
+    control->motorLeft_N = (1-lambda) * u1.motorLeft_N + lambda * u2.motorLeft_N;
+    control->motorRight_N = (1-lambda) * u1.motorRight_N + lambda * u2.motorRight_N;
+    flappingAngleOffsetDeg = (1-lambda) * offset1 + lambda * offset2;
+  }
+#endif
+  
+// force the firmware to do a pre-planned flapping sequence for figure 3
+#ifdef FIGURE3
+  if (lqrControllerState == hovering || lqrControllerState == waiting) {
+    flappingConfig1.state = disabled;
+    flappingConfig2.state = disabled;
+    flappingAngleOffsetDeg = controlHelper(self, control, setpoint, sensors, state, tick, &flappingConfig1);
+  } else {
+    // flapping
+
+    float lambda = 0.5f;
+    if (elapsedTime < RAMP_TIME_MS) {
+      // transition
+      flappingConfig1.state = disabled;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 10.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime);
+    }
+    else if (elapsedTime < 5000) {
+      // 5 Hz, 10 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 10.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 10.0f;
+    }
+    else if (elapsedTime < 5000 + RAMP_TIME_MS) {
+      // transition
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 10.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 20.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime);
+    }
+    else if (elapsedTime < 10000) {
+      // 5 Hz, 20 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 20.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 20.0f;
+    }
+    else {
+      // stop flapping
+      flappingConfig1.state = disabled;
+      flappingConfig2.state = disabled;
+      lqrControllerState = hovering; // will take effect next time through function
+    }
+
+      control_t u1, u2; 
+      float offset1 = controlHelper(self, &u1, setpoint, sensors, state, elapsedTime, &flappingConfig1);
+      float offset2 = controlHelper(self, &u2, setpoint, sensors, state, elapsedTime, &flappingConfig2);
+
+      // as time increases, switch from u1 control (hovering) to u2 control (flapping)
+      control->servoLeft_deg = (1-lambda) * u1.servoLeft_deg + lambda * u2.servoLeft_deg;
+      control->servoRight_deg = (1-lambda) * u1.servoRight_deg + lambda * u2.servoRight_deg;
+      control->motorLeft_N = (1-lambda) * u1.motorLeft_N + lambda * u2.motorLeft_N;
+      control->motorRight_N = (1-lambda) * u1.motorRight_N + lambda * u2.motorRight_N;
+      flappingAngleOffsetDeg = (1-lambda) * offset1 + lambda * offset2;
+    }
+#endif // FIGURE3
+
+// force the firmware to do a pre-planned flapping pattern for table 3
+#ifdef TABLE3
+// TODO
+#endif // TABLE3
 
   // logging
   leftMotor = control->motorLeft_N;
   rightMotor = control->motorRight_N;
-  leftServo = control->servoLeft_deg - flappingAngleOffsetDeg; // log the servo value BEFORE flappingAngleOffsetDeg was added
-  rightServo = control->servoRight_deg - flappingAngleOffsetDeg;
+  leftServo = control->servoLeft_deg;
+  rightServo = control->servoRight_deg;
   flappingOffset = flappingAngleOffsetDeg;
 
   px = state->position.x;
@@ -771,12 +682,6 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
   wz = sensors->gyro.z;
 
   lastTick = tick;
-  
-  // disable motor output
-  // control->motorLeft_N = 0.0f;
-  // control->motorRight_N = 0.0f;
-  // control->servoLeft_deg = 0.0f;
-  // control->servoRight_deg = 10.0f;
 }
 
 void controllerLQRFirmwareInit(void)
@@ -848,16 +753,15 @@ LOG_ADD(LOG_UINT8, rollMode, &rollMode)
 LOG_ADD(LOG_UINT8, pitchMode, &pitchMode)
 LOG_ADD(LOG_UINT8, zMode, &zMode)
 
-LOG_ADD(LOG_UINT8, flap_mode, &flappingConfig.state)
-LOG_ADD(LOG_UINT8, flap_filter, &flappingConfig.useAveragingFilter)
+LOG_ADD(LOG_UINT8, flap_mode, &lqrControllerState)
+LOG_ADD(LOG_UINT8, flap_mode1, &flappingConfig1.state)
+LOG_ADD(LOG_UINT8, flap_mode2, &flappingConfig2.state)
 LOG_ADD(LOG_UINT32, tick, &lastTick)
 
 LOG_GROUP_STOP(ctrlLQR)
 
 PARAM_GROUP_START(ctrlLQR)
-PARAM_ADD(PARAM_UINT8, lqr_mode, &lqr_mode)
-PARAM_ADD(PARAM_UINT8, flap_mode, &flappingConfig.state)
-PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig.hz)
-PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig.amplitudeDeg)
-PARAM_ADD(PARAM_UINT8, flap_filter, &flappingConfig.useAveragingFilter)
+PARAM_ADD(PARAM_UINT8, flap_mode, &lqrControllerState)
+PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig2.hz)
+PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig2.amplitudeDeg)
 PARAM_GROUP_STOP(ctrlLQR)
