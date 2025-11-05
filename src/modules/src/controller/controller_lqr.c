@@ -86,6 +86,8 @@ static controllerLQR_t g_self = {
 //         //  -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 2.42921273f, -0.39774998f, 0.00000000f, -0.01305347f},
 //          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 1.0f, -0.39774998f, 0.00000000f, -0.01305347f},
 
+
+// use for paper?
 .k1 = {0.09149180f, -0.00926999f, 0.00000000f,
          0.04898391f, 0.57753220f, -0.21136620f, 0.13835939f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06230944f, -0.04034881f},
 
@@ -97,6 +99,18 @@ static controllerLQR_t g_self = {
 
   .k4 = {0.00000000f, 0.89836564f, 2.18637896f,
          -4.00516745f, 0.00000000f, -0.10302765f, 0.00000000f, 1.06635256f, 1.34283501f, -0.39774998f, 0.00000000f, -0.01305347f},
+
+  // .k1 = {0.20378751f, -0.00926999f, 0.00000000f,
+  //        0.04898391f, 0.62454995f, -0.21136620f, 0.18507831f, -0.01162586f, 0.00000000f, 0.00733346f, 0.06331682f, -0.04034881f},
+
+  // .k2 = {0.20378751f, 0.00926999f, 0.00000000f,
+  //        -0.04898391f, 0.62454995f, 0.21136620f, 0.18507831f, 0.01162586f, -0.00000000f, -0.00733346f, 0.06331682f, 0.04034881f},
+
+  // .k3 = {0.00000000f, -0.89836564f, 2.18637896f,
+  //        4.00516745f, 0.00000000f, 0.10302765f, 0.00000000f, -1.06635256f, 1.34283501f, 0.39774998f, 0.00000000f, 0.01305347f},
+
+  // .k4 = {0.00000000f, 0.89836564f, 2.18637896f,
+  //        -4.00516745f, -0.00000000f, -0.10302765f, -0.00000000f, 1.06635256f, 1.34283501f, -0.39774998f, -0.00000000f, -0.01305347f},
 
   // .mass = 0.60610744f
   .mass = 0.593f
@@ -256,8 +270,8 @@ static float sRoll, sPitch, sYaw;
 static uint32_t lastTick;
 
 // we don't need to store the whole array - just accumuate and then divide
-// the averagingFilter_s struct is updated every tick (1 ms), so 1 flapping cycle is 100 ticks (100 ms)
-#define AVERAGING_FILTER_LENGTH 100
+// the averagingFilter_s struct is updated every tick (1 ms), 5 Hz -> 200 ms, 10 Hz -> 100 ms, 15 Hz -> 50 ms
+#define AVERAGING_FILTER_LENGTH 200
 struct averagingFilter_s {
   float pitch[AVERAGING_FILTER_LENGTH];
   float x[AVERAGING_FILTER_LENGTH];
@@ -371,47 +385,6 @@ static inline bool isClose(float a, float b) {
 }
 
 /*
-Due to the location of the accelerometer being offset a distance from the center of mass,
-when flapping, the z-velocity will oscillate around some biased, negative value.
-To account for this, we simply add in this bias term, which we discovered by 
-logging the z-velocity estimate when flapping at a constant z position.
-             5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
-            5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
-  vz         -.03    -.10    -.24    -.27   -.01    -.03    -.04   -.01    -.01
-*/
-static float vzLUT(float w_hz, float a_deg) {
-  float vz = 0.0;
-  if (isClose(w_hz, 5.0f) && isClose(a_deg, 5.0f)) {
-    vz = -0.03f;
-  }
-  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 10.0f)) {
-    vz = -0.10f;
-  }
-  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 15.0f)) {
-    vz = -0.24f;
-  }
-  else if (isClose(w_hz, 5.0f) && isClose(a_deg, 20.0f)) {
-    vz = -0.27f;
-  }
-  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 5.0f)) {
-    vz = -0.01f;
-  }
-  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 10.0f)) {
-    vz = -0.03f;
-  }
-  else if (isClose(w_hz, 10.0f) && isClose(a_deg, 15.0f)) {
-    vz = -0.04f;
-  }
-  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 5.0f)) {
-    vz = -0.01f;
-  }
-  else if (isClose(w_hz, 15.0f) && isClose(a_deg, 10.0f)) {
-    vz = -0.01f;
-  }
-  return vz;
-}
-
-/*
 As discussed in paper, beta is needed to calcualte Phi, the thrust offset.
   w_hz        5 Hz    5 Hz    5 Hz    5 Hz  10 Hz   10 Hz   10 Hz  15 Hz   15 Hz
   a_deg      5 deg  10 deg  15 deg  20 deg  5 deg  10 deg  15 deg  5 deg  10 deg
@@ -420,31 +393,31 @@ As discussed in paper, beta is needed to calcualte Phi, the thrust offset.
 static int betaLUT(float w_hz, float a_deg) {
   int beta = 0;
   if (isClose(w_hz, 5.0f) && isClose(a_deg, 5.0f)) {
-    beta = 12;
+    beta = 0;
   }
   else if (isClose(w_hz, 5.0f) && isClose(a_deg, 10.0f)) {
-    beta = 24;
+    beta = 0;
   }
   else if (isClose(w_hz, 5.0f) && isClose(a_deg, 15.0f)) {
-    beta = 35;
+    beta = 0;
   }
   else if (isClose(w_hz, 5.0f) && isClose(a_deg, 20.0f)) {
-    beta = 42;
+    beta = 30;
   }
   else if (isClose(w_hz, 10.0f) && isClose(a_deg, 5.0f)) {
-    beta = 8;
+    beta = 0;
   }
   else if (isClose(w_hz, 10.0f) && isClose(a_deg, 10.0f)) {
-    beta = 15;
+    beta = 0;
   }
   else if (isClose(w_hz, 10.0f) && isClose(a_deg, 15.0f)) {
-    beta = 19;
+    beta = 0;
   }
   else if (isClose(w_hz, 15.0f) && isClose(a_deg, 5.0f)) {
-    beta = 4;
+    beta = 0;
   }
   else if (isClose(w_hz, 15.0f) && isClose(a_deg, 10.0f)) {
-    beta = 9;
+    beta = 0;
   }
   return beta;
 }
@@ -474,17 +447,22 @@ float controlHelper(controllerLQR_t* self, control_t *control, const setpoint_t 
                  radians(state->attitude.roll), -radians(state->attitude.pitch), radians(state->attitude.yaw),
                  state->velocity.x, state->velocity.y, state->velocity.z,
                  radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z)};
+
+  if (flapConfig->state == enabled) {
+    // x[6] = 0.0f; // ignore the x velocity (significantly corrupted due to constant offset in x-direction)
+
+    // use the cycle-averaged x position and x velocity to deal with the fact
+    // that the IMU is located above the center of mass. This approximation
+    // better represents the position and velocity of the CoM
+    // x[0] = averagingFilter.avgX;
+    // x[6] = averagingFilter.avgVx;
+  }
   
   // desired state
   float xd[12] = {0};
   xd[0] = setpoint->position.x;
   xd[1] = setpoint->position.y;
   xd[2] = setpoint->position.z;
-
-  // account for accelerometer bias with LUT when flapping
-  if (flapConfig->state == enabled) {
-    x[8] -= vzLUT(flapConfig->hz, flapConfig->amplitudeDeg);
-  }
 
   // implement the LQR control law (with flapping, if enabled)
   // u = -K(x - x_desired) + ue + u_delta[k]
@@ -523,7 +501,7 @@ enum LQRControllerState_t {
 } lqrControllerState;
 
 // #define FIGURE3
-// #define TABLE3
+#define TABLE3
 
 #if defined(FIGURE3) && defined(TABLE3)
 #error "Cannot create both Figure 3 and Table 3 concurrently"
@@ -621,7 +599,7 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
       flappingConfig2.hz = 5.0f;
       flappingConfig2.amplitudeDeg = 20.0f;
 
-      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime);
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 5000);
     }
     else if (elapsedTime < 10000) {
       // 5 Hz, 20 deg
@@ -655,14 +633,150 @@ void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *
 
 // force the firmware to do a pre-planned flapping pattern for table 3
 #ifdef TABLE3
-// TODO
+  if (lqrControllerState == hovering || lqrControllerState == waiting) {
+    flappingConfig1.state = disabled;
+    flappingConfig2.state = disabled;
+    flappingAngleOffsetDeg = controlHelper(self, control, setpoint, sensors, state, tick, &flappingConfig1);
+  } else {
+    // flapping
+    float lambda = 0.5f;
+    if (elapsedTime < 5000) {
+      // transition
+      flappingConfig1.state = disabled;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 5.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime);
+    }
+    else if (elapsedTime < 10000) {
+      // 5 Hz, 10 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 5.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 10.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 5000);
+    }
+    else if (elapsedTime < 15000) {
+      // 5 Hz, 15 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 10.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 15.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 10000);
+    }
+    else if (elapsedTime < 20000) {
+      // 5 Hz, 20 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 5.0f;
+      flappingConfig1.amplitudeDeg = 15.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 5.0f;
+      flappingConfig2.amplitudeDeg = 20.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 15000);
+    }
+    else if (elapsedTime < 25000){
+      // stop flapping
+      flappingConfig1.state = disabled;
+      flappingConfig2.state = disabled;
+    }
+    else if (elapsedTime < 30000) {
+      // 10 Hz, 5 deg
+      flappingConfig1.state = disabled;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 10.0f;
+      flappingConfig2.amplitudeDeg = 5.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 25000);
+    }
+    else if (elapsedTime < 35000) {
+      // 10 Hz, 10 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 10.0f;
+      flappingConfig1.amplitudeDeg = 5.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 10.0f;
+      flappingConfig2.amplitudeDeg = 10.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 30000);
+    }
+    else if (elapsedTime < 40000) {
+      // 10 Hz, 15 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 10.0f;
+      flappingConfig1.amplitudeDeg = 10.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 10.0f;
+      flappingConfig2.amplitudeDeg = 15.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 35000);
+    }
+    else if (elapsedTime < 45000) {
+      // stop flapping
+      flappingConfig1.state = disabled;
+      flappingConfig2.state = disabled;
+    }
+    else if (elapsedTime < 50000) {
+      // 15 Hz, 5 deg
+      flappingConfig1.state = disabled;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 15.0f;
+      flappingConfig2.amplitudeDeg = 5.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 45000);
+    }
+    else if (elapsedTime < 55000) {
+      // 15 Hz, 10 deg
+      flappingConfig1.state = enabled;
+      flappingConfig1.hz = 15.0f;
+      flappingConfig1.amplitudeDeg = 5.0f;
+
+      flappingConfig2.state = enabled;
+      flappingConfig2.hz = 15.0f;
+      flappingConfig2.amplitudeDeg = 10.0f;
+
+      lambda = safeInterpolate(0.0f, 1.0f, (float) RAMP_TIME_MS, (float) elapsedTime - 50000);
+    }
+    else {
+      // stop flapping
+      flappingConfig1.state = disabled;
+      flappingConfig2.state = disabled;
+      lqrControllerState = hovering; // will take effect next time through function
+    }
+
+    control_t u1, u2; 
+    float offset1 = controlHelper(self, &u1, setpoint, sensors, state, elapsedTime, &flappingConfig1);
+    float offset2 = controlHelper(self, &u2, setpoint, sensors, state, elapsedTime, &flappingConfig2);
+
+    // as time increases, switch from u1 control (hovering) to u2 control (flapping)
+    control->servoLeft_deg = (1-lambda) * u1.servoLeft_deg + lambda * u2.servoLeft_deg;
+    control->servoRight_deg = (1-lambda) * u1.servoRight_deg + lambda * u2.servoRight_deg;
+    control->motorLeft_N = (1-lambda) * u1.motorLeft_N + lambda * u2.motorLeft_N;
+    control->motorRight_N = (1-lambda) * u1.motorRight_N + lambda * u2.motorRight_N;
+    flappingAngleOffsetDeg = (1-lambda) * offset1 + lambda * offset2;
+  }
 #endif // TABLE3
 
   // logging
-  leftMotor = control->motorLeft_N;
-  rightMotor = control->motorRight_N;
   leftServo = control->servoLeft_deg;
   rightServo = control->servoRight_deg;
+  leftMotor = control->motorLeft_N;
+  rightMotor = control->motorRight_N;
   flappingOffset = flappingAngleOffsetDeg;
 
   px = state->position.x;

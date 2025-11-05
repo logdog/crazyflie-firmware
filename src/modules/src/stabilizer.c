@@ -311,6 +311,7 @@ static void stabilizerTask(void* param)
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
+  DEBUG_PRINT("Sensors calibrated\n");
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 

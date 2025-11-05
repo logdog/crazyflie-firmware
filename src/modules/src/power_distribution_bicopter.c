@@ -66,8 +66,8 @@ struct bicopterConfig_s bicopterConfig = {
     .leftServoTrim = 85,
     .rightServoTrim = 60,
 #elif defined(CONFIG_BICOPTER_NAME_REDCOPTER)
-    .leftServoTrim = 60,
-    .rightServoTrim = 90,
+    .leftServoTrim = 0,
+    .rightServoTrim = 0,
 #else
 #error "MELONCOPTER or REDCOPTER must be selected"
 #endif
@@ -86,7 +86,7 @@ struct bicopterConfig_s bicopterConfig = {
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 static uint16_t maxThrust = UINT16_MAX;
-static float maxServoAngle = 60.0f;
+static float maxServoAngle = 80.0f;
 
 int powerDistributionMotorType(uint32_t id)
 {
