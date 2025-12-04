@@ -1001,6 +1001,21 @@ void sensorsBmi088Bmp3xxDataAvailableCallback(void)
   }
 }
 
+LOG_GROUP_START(dhiro)
+// 1kHz
+LOG_ADD(LOG_FLOAT, accx, &sensorData.acc.x)
+LOG_ADD(LOG_FLOAT, accy, &sensorData.acc.y)
+LOG_ADD(LOG_FLOAT, accz, &sensorData.acc.z)
+LOG_ADD(LOG_FLOAT, gyrox, &sensorData.gyro.x)
+LOG_ADD(LOG_FLOAT, gyroy, &sensorData.gyro.y)
+LOG_ADD(LOG_FLOAT, gyroz, &sensorData.gyro.z)
+
+// 20 Hz
+LOG_ADD(LOG_FLOAT, magx, &sensorData.mag.x)
+LOG_ADD(LOG_FLOAT, magy, &sensorData.mag.y)
+LOG_ADD(LOG_FLOAT, magz, &sensorData.mag.z)
+LOG_GROUP_STOP(dhiro)
+
 #ifdef GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
 LOG_GROUP_START(gyro)
 LOG_ADD(LOG_INT16, xRaw, &gyroRaw.x)
