@@ -402,11 +402,26 @@ float controlHelper(controllerLQR_t* self, control_t *control, const setpoint_t 
     // x[6] = averagingFilter.avgVx;
   }
   
-  // desired state
+  // desired state (by default, set only the desired position)
   float xd[12] = {0};
   xd[0] = setpoint->position.x;
   xd[1] = setpoint->position.y;
   xd[2] = setpoint->position.z;
+
+
+  // Velocity control mode using the XBox 360 controller
+  // althold flight mode. Values set with commander.send_setpoint()
+  if (setpoint->mode.roll == modeAbs && setpoint->mode.pitch == modeAbs && setpoint->mode.z == modeVelocity) {
+    xd[0] = x[0];  // x
+    xd[1] = x[1];  // y
+    xd[2] = x[2];  // z
+    xd[3] = radians(setpoint->attitude.roll);
+    xd[4] = -radians(setpoint->attitude.pitch);
+    xd[5] = 0.0f;  // yaw
+    xd[6] = x[6];  // x velocity
+    xd[7] = x[7];  // y velocity
+    xd[8] = setpoint->velocity.z;
+  }
 
   // implement the LQR control law (with flapping, if enabled)
   // u = -K(x - x_desired) + ue + u_delta[k]
@@ -444,7 +459,7 @@ enum LQRControllerState_t {
   flapping
 } lqrControllerState;
 
-#define TABLE3
+// #define TABLE3
 
 void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
