@@ -93,6 +93,11 @@ config PLATFORM_BICOPTER
     select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
+config PLATFORM_GEMUS
+    bool "Build for Gemus"
+    select SENSORS_BMI088_BMP3XX
+    select SENSORS_BMI088_SPI
+
 endchoice
 
 config BOLT11_BRUSHED

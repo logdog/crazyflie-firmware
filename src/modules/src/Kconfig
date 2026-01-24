@@ -215,6 +215,11 @@ config POWER_DISTRIBUTION_BICOPTER
     depends on PLATFORM_BICOPTER
     help
         Power distribution function for Bicopter
+config POWER_DISTRIBUTION_GEMUS
+    bool "Gemus power distribution"
+    depends on PLATFORM_GEMUS
+    help
+        Power distribution function for Gemus
 endchoice
 config POWER_DISTRIBUTION_FLAPPER_REVB
     bool "Flapper  Nimble+ power distribution (PCB revision B)"
