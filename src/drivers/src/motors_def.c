@@ -828,7 +828,7 @@ const MotorPerifDef* servoMapRX2 = &MOTORS_PA3_TIM5_CH4_BRUSHLESS_OD;
 const MotorPerifDef* servoMapIO1 = &MOTORS_PB8_TIM4_CH3_BRUSHLESS_OD;
 
 
-// Servo-specific definitions with 50Hz PWM timing
+// Servo-specific definitions with 330 Hz PWM timing
 // Deck IO1, PB8, TIM4_CH3 - Servo PWM timing
 static const MotorPerifDef MOTORS_PB8_TIM4_CH3_SERVO =
 {
@@ -843,7 +843,7 @@ static const MotorPerifDef MOTORS_PB8_TIM4_CH3_SERVO =
     .tim           = TIM4,
     .timPolarity   = TIM_OCPolarity_High,
     .timDbgStop    = DBGMCU_TIM4_STOP,
-    .timPeriod     = 3030-1,   // 5 ms period = 200 Hz
+    .timPeriod     = 3030-1,   // 330 Hz = 3.030 ms
     .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
@@ -873,6 +873,50 @@ static const MotorPerifDef MOTORS_PB5_TIM3_CH2_SERVO =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
+// Servo PWM timing - RX2
+static const MotorPerifDef MOTORS_PA3_TIM5_CH4_SERVO =
+{
+    .drvType       = SERVO,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_3,
+    .gpioPinSource = GPIO_PinSource3,
+    .gpioOType     = GPIO_OType_OD,
+    .gpioAF        = GPIO_AF_TIM5,
+    .timPerif      = RCC_APB1Periph_TIM5,
+    .tim           = TIM5,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM5_STOP,
+    .timPeriod     = 3030-1,   // 330 Hz = 3.030 ms
+    .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
+    .setCompare    = TIM_SetCompare4,
+    .getCompare    = TIM_GetCapture4,
+    .ocInit        = TIM_OC4Init,
+    .preloadConfig = TIM_OC4PreloadConfig,
+};
+
+// TX2
+static const MotorPerifDef MOTORS_PA2_TIM5_CH3_SERVO = 
+{
+    .drvType       = SERVO,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_2,
+    .gpioPinSource = GPIO_PinSource2,
+    .gpioOType     = GPIO_OType_OD,
+    .gpioAF        = GPIO_AF_TIM5,
+    .timPerif      = RCC_APB1Periph_TIM5,
+    .tim           = TIM5,
+    .timPolarity   = TIM_OCPolarity_High,
+    .timDbgStop    = DBGMCU_TIM5_STOP,
+    .timPeriod     = 3030-1,   // 330 Hz = 3.030 ms
+    .timPrescaler  = 84-1,     // 84MHz/84 = 1MHz timer clock, 1us per tick
+    .setCompare    = TIM_SetCompare3,
+    .getCompare    = TIM_GetCapture3,
+    .ocInit        = TIM_OC3Init,
+    .preloadConfig = TIM_OC3PreloadConfig,
+};
+
 /**
  * Bicopter motor configuration using IO1 and IO2 for servos
  * M1 -> Standard motor connector M1 (PA1, TIM2_CH2) - Left motor  
@@ -886,4 +930,15 @@ const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS] =
   &MOTORS_PB8_TIM4_CH3_SERVO,           // M2 - Left servo (IO1 with servo PWM)
   &MOTORS_PB5_TIM3_CH2_SERVO,           // M3 - Right servo (IO2 with servo PWM)
   &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP // M4 - Right motor (standard)
+};
+
+/**
+ * Gemus motor configuration using four servos
+ */
+const MotorPerifDef* motorMapGemus[NBR_OF_MOTORS] =
+{
+  &MOTORS_PB8_TIM4_CH3_SERVO,    // M1 - IO1
+  &MOTORS_PB5_TIM3_CH2_SERVO,    // M2 - IO2
+  &MOTORS_PA3_TIM5_CH4_SERVO,    // M3 - TX2 
+  &MOTORS_PA2_TIM5_CH3_SERVO     // M4 - RX2
 };
