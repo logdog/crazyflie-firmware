@@ -24,7 +24,6 @@
 #include "config.h"
 #include "math.h"
 #include "platform_defaults.h"
-#include "bicopterdeck.h"
 #include "pm.h"
 #include "math3d.h"
 #include "motors.h"

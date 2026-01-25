@@ -9,6 +9,7 @@ obj-y += led.o
 obj-y += lh_bootloader.o
 obj-y += lps25h.o
 obj-y += maxsonar.o
+obj-y += mcp3425.o
 obj-y += motors.o
 obj-y += mpu6050.o
 obj-y += mpu6500.o

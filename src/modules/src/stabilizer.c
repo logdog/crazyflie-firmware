@@ -50,16 +50,6 @@
 #include "health.h"
 #include "supervisor.h"
 
-// delete me at some point?
-#include "bicopterdeck.h"
-
-// delete me at some point
-// from servo_history.c
-// #include "servo_history.c"
-extern const unsigned int servoHistoryLength;
-extern const float servoLeftHistory[];
-extern const float servoRightHistory[];
-
 #include "estimator.h"
 #include "usddeck.h"
 #include "quatcompress.h"
@@ -379,34 +369,6 @@ static void stabilizerTask(void* param)
       } else {
         motorsStop();
       }
-
-      // // maximum thrust test
-      // if (areMotorsAllowedToRun) {
-      //   // if (count == 0) DEBUG_PRINT("motors are allowed to run\n");
-      //   control.motorLeft_N = 0.0f;
-      //   control.motorRight_N = 0.0f;
-      //   control.servoLeft_deg = 0;
-      //   control.servoRight_deg = 0;
-
-      //   control.controlMode = controlModeLQR;
-      //   powerDistribution(&control, &motorThrustUncapped);
-      //   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-      //   const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-      //   logCapWarning(isCapped);
-
-      //   // pulse the motors twice
-      //   if ((count >= 0 && count < 10000))  {
-      //     motorPwm.motors.m1 = 65000;
-      //     motorPwm.motors.m4 = 65000;
-      //   }
-      //   count++;
-
-      //   setMotorRatios(&motorPwm);
-      // }
-      // else {
-      //   motorsStop();
-      //   count = 0;
-      // }
 
       // Compute compressed log formats
       compressState();
