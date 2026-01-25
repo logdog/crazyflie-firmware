@@ -176,8 +176,9 @@ GPIO_InitTypeDef GPIO_PassthroughOutput =
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
   #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
-  #ifndef CONFIG_PLATFORM_BICOPTER // The bicopter will do battery compensation in power_distribution_bicopter.c
- 
+  #if !(defined(CONFIG_PLATFORM_BICOPTER) || defined(CONFIG_PLATFORM_GEMUS)) 
+  // The bicopter will do battery compensation in power_distribution_bicopter.c
+  // gemus has 4 servos so no compensation is required
   ASSERT(id < NBR_OF_MOTORS);
 
   if (motorMap[id]->drvType == BRUSHED)
@@ -200,6 +201,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     float ratio = volts / supplyVoltage;
     return UINT16_MAX * ratio;
   }
+
   #endif
   #endif
 
