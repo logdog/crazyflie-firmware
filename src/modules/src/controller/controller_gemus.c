@@ -24,13 +24,13 @@ static struct schenato_e leftSchenatoProfile = {
     .T = 1.0f,
 };
 
-static struct schenato_e rightSchenatoProfile = {
-    .A = 1.0f,
-    .K = 8.0f,
-    .rho = 0.25f,
-    .gamma = 0.1f,
-    .T = 1.0f,
-};
+// static struct schenato_e rightSchenatoProfile = {
+//     .A = 1.0f,
+//     .K = 8.0f,
+//     .rho = 0.25f,
+//     .gamma = 0.1f,
+//     .T = 1.0f,
+// };
 
 void controllerGemusInit(void)
 {
@@ -43,7 +43,7 @@ bool controllerGemusTest(void)
 
 // time_s is the time in seconds
 float calculateNormalizedTime(float time_s, struct schenato_e s) {
-    return s.T * (time_s / (s.T) - floor(time_s / (s.T)));
+    return s.T * (time_s / (s.T) - (float) floor(time_s / (s.T)));
 }
 
 // t is the normalized time [0,1)
