@@ -312,6 +312,7 @@ static void stabilizerTask(void* param)
   while(!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
+  DEBUG_PRINT("Sensors calibrated\n");
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
@@ -378,6 +379,34 @@ static void stabilizerTask(void* param)
       } else {
         motorsStop();
       }
+
+      // // maximum thrust test
+      // if (areMotorsAllowedToRun) {
+      //   // if (count == 0) DEBUG_PRINT("motors are allowed to run\n");
+      //   control.motorLeft_N = 0.0f;
+      //   control.motorRight_N = 0.0f;
+      //   control.servoLeft_deg = 0;
+      //   control.servoRight_deg = 0;
+
+      //   control.controlMode = controlModeLQR;
+      //   powerDistribution(&control, &motorThrustUncapped);
+      //   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+      //   const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+      //   logCapWarning(isCapped);
+
+      //   // pulse the motors twice
+      //   if ((count >= 0 && count < 10000))  {
+      //     motorPwm.motors.m1 = 65000;
+      //     motorPwm.motors.m4 = 65000;
+      //   }
+      //   count++;
+
+      //   setMotorRatios(&motorPwm);
+      // }
+      // else {
+      //   motorsStop();
+      //   count = 0;
+      // }
 
       // Compute compressed log formats
       compressState();

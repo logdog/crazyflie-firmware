@@ -484,7 +484,7 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
   float tmpSPX, tmpSPY, tmpSPZ;
   float zacc;
 
-  if (quadIsFlying) // only acceleration in z direction
+  if (quadIsFlying && false) // only acceleration in z direction
   {
     // Use accelerometer and not commanded thrust, as this has proper physical units
     zacc = acc->z;
@@ -530,6 +530,11 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
     this->S[KC_STATE_PX] += dt * (acc->x + gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][0]);
     this->S[KC_STATE_PY] += dt * (acc->y - gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][1]);
     this->S[KC_STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * this->R[2][2]);
+
+    // set gyro->z and gyro->x to zero (valid for bicopter flapping)
+    // this->S[KC_STATE_PX] += dt * (acc->x - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][0]);
+    // this->S[KC_STATE_PY] += dt * (acc->y                    - GRAVITY_MAGNITUDE * this->R[2][1]);
+    // this->S[KC_STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - GRAVITY_MAGNITUDE * this->R[2][2]);
   }
 
   // attitude update (rotate by gyroscope), we do this in quaternions

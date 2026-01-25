@@ -86,7 +86,7 @@ struct bicopterConfig_s bicopterConfig = {
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 static uint16_t maxThrust = UINT16_MAX;
-static float maxServoAngle = 60.0f;
+static float maxServoAngle = 80.0f;
 
 int powerDistributionMotorType(uint32_t id)
 {
