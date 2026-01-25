@@ -43,7 +43,7 @@ bool controllerGemusTest(void)
 
 // time_s is the time in seconds
 float calculateNormalizedTime(float time_s, struct schenato_e s) {
-    return s.T * (time_s / (s.T) - floor(time_s / (s.T)));
+    return s.T * (time_s / (s.T) - (float) floor(time_s / (s.T)));
 }
 
 // t is the normalized time [0,1)
