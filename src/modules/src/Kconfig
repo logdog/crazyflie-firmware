@@ -62,10 +62,11 @@ config CONTROLLER_LQR
     help
         Use the LQR controller as default
 
-config COTNROLLER_GEMUS
+config CONTROLLER_GEMUS
     bool "Gemus Controller"
-    help 
-        Use the Gemus controller as default
+    help
+        Required controller for Gemus platform
+
 endchoice
 
 config CONTROLLER_OOT
