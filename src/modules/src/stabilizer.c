@@ -295,42 +295,6 @@ void rateSupervisorTask(void *pvParameters) {
  * (ie. returning without modifying the output structure).
  */
 
-struct schenato_e {
-  float A;
-  float K;
-  float rho;
-  float gamma;
-  float T;
-  bool enabled;
-  int8_t sign;
-};
-
-struct gemus_servo_test_e {
-  struct schenato_e left;
-  struct schenato_e right;
-};
-
-struct gemus_servo_test_e gemus = {
-  .left = {
-    .A = 1.0f,
-    .K = 8.0f,
-    .rho = 0.25f,
-    .gamma = 0.1f,
-    .T = 1.0f,
-    .enabled = true,
-    .sign = 1,
-  },
-  .right = {
-    .A = 1.0f,
-    .K = 8.0f,
-    .rho = 0.25f,
-    .gamma = 0.1f,
-    .T = 1.0f,
-    .enabled = true,
-    .sign = 1,
-  }
-};
-
 static uint8_t runTest = 0;
 static void stabilizerTask(void* param)
 {
@@ -351,7 +315,7 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
-  int32_t count = 0;
+  // int32_t count = 0;
 
   systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
@@ -398,84 +362,7 @@ static void stabilizerTask(void* param)
       // Let the supervisor modify the setpoint to handle exceptional conditions
       supervisorOverrideSetpoint(&setpoint);
 
-      // controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
-
-      // October 7th, 2025 - replay the servo angles on the ati mini
-      if (areMotorsAllowedToRun) {
-        if (count == 0) DEBUG_PRINT("motors are allowed to run\n");
-        if (count % 1000 == 0) DEBUG_PRINT("motors are allowed to run %d\n", count);
-        control.motorLeft_N = 5.0f;
-        control.motorRight_N = 5.0f;
-        control.servoLeft_deg = 0;
-        control.servoRight_deg = 0;
-        control.controlMode = controlModeLQR;
-
-        float time_s = (float)(count) / 1000.0f;
-
-        // LEFT
-        if (gemus.left.enabled) {
-          // wrap time to [0, T)
-          float t = gemus.left.T * (time_s / (gemus.left.T) - floor(time_s / (gemus.left.T)));
-
-          if (0 <= t && t <= gemus.left.rho*gemus.left.T) {
-            control.servoLeft_deg = gemus.left.A * (1 + gemus.left.K) * 
-              (1 - 2.0f*t/(gemus.left.rho*gemus.left.T)) 
-              + gemus.left.gamma*gemus.left.A;
-          }
-          else {
-            control.servoLeft_deg = gemus.left.A * (1 + gemus.left.K) * 
-              (2.0f*(t - gemus.left.rho*gemus.left.T)/((1 - gemus.left.rho)*gemus.left.T) - 1) 
-              + gemus.left.gamma*gemus.left.A;
-          }
-
-          control.servoLeft_deg *= gemus.left.sign;
-        }
-
-        // if (gemus.right.enabled) {
-        //   float t = gemus.right.T * (time_s / (gemus.right.T) - floor(time_s / (gemus.right.T)));
-
-        //   if (0 <= t && t <= gemus.right.rho*gemus.right.T) {
-        //   control.servoRight_deg = gemus.right.A * (1 + gemus.right.K) * 
-        //     (1 - 2.0f*t/(gemus.right.rho*gemus.right.T)) 
-        //     + gemus.left.gamma*gemus.right.A;
-        //   }
-        //   else {
-        //     control.servoRight_deg = gemus.right.A * (1 + gemus.right.K) * 
-        //       (2.0f*(t - gemus.right.rho*gemus.right.T)/((1 - gemus.right.rho)*gemus.right.T) - 1) 
-        //       + gemus.right.gamma*gemus.right.A;
-        //   }
-
-        //   control.servoRight_deg *= gemus.right.sign;
-        // }
-
-        // for simplicity, use the left parameters only
-        if (gemus.left.enabled) {
-          float t = gemus.left.T * (time_s / (gemus.left.T) - floor(time_s / (gemus.left.T)));
-
-          if (0 <= t && t <= gemus.left.rho*gemus.left.T) {
-          control.servoRight_deg = gemus.left.A * (1 + gemus.left.K) * 
-            (1 - 2.0f*t/(gemus.left.rho*gemus.left.T)) 
-            + gemus.left.gamma*gemus.left.A;
-          }
-          else {
-            control.servoRight_deg = gemus.left.A * (1 + gemus.left.K) * 
-              (2.0f*(t - gemus.left.rho*gemus.left.T)/((1 - gemus.left.rho)*gemus.left.T) - 1) 
-              + gemus.left.gamma*gemus.left.A;
-          }
-
-          control.servoRight_deg *= gemus.right.sign;
-        }
-
-        // control.servoLeft_deg = 10.0f* sinf(2.0f*3.141592f*1.0f*t);
-        // control.servoRight_deg = 10.0f* sinf(2.0f*3.141592f*1.0f*t);
-
-        controlMotors(&control);
-        count++;
-      }
-      else {
-        motorsStop();
-        count = 0;
-      }
+      controller(&control, &setpoint, &sensorData, &state, stabilizerStep);
 
       // if the battery voltage drops to a critical level, stop the motors
       float batteryVoltage = pmGetBatteryVoltage();
@@ -486,11 +373,11 @@ static void stabilizerTask(void* param)
 
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      // if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
-      //   controlMotors(&control);
-      // } else {
-      //   motorsStop();
-      // }
+      if (areMotorsAllowedToRun && !hasReachedCriticalBatteryLevel) {
+        controlMotors(&control);
+      } else {
+        motorsStop();
+      }
 
       // Compute compressed log formats
       compressState();
@@ -789,24 +676,6 @@ LOG_ADD(LOG_FLOAT, y, &sensorData.gyroSec.y)
 LOG_ADD(LOG_FLOAT, z, &sensorData.gyroSec.z)
 LOG_GROUP_STOP(gyroSec)
 #endif
-
-PARAM_GROUP_START(gemus)
-PARAM_ADD(PARAM_FLOAT, left_A, &gemus.left.A)
-PARAM_ADD(PARAM_FLOAT, left_K, &gemus.left.K)
-PARAM_ADD(PARAM_FLOAT, left_rho, &gemus.left.rho)
-PARAM_ADD(PARAM_FLOAT, left_gamma, &gemus.left.gamma)
-PARAM_ADD(PARAM_FLOAT, left_T, &gemus.left.T)
-PARAM_ADD(PARAM_UINT8, left_en, &gemus.left.enabled)
-PARAM_ADD(PARAM_INT8, left_sign, &gemus.left.sign)
-
-// PARAM_ADD(PARAM_FLOAT, right_A, &gemus.right.A)
-// PARAM_ADD(PARAM_FLOAT, right_K, &gemus.right.K)
-// PARAM_ADD(PARAM_FLOAT, right_rho, &gemus.right.rho)
-// PARAM_ADD(PARAM_FLOAT, right_gamma, &gemus.right.gamma)
-// PARAM_ADD(PARAM_FLOAT, right_T, &gemus.right.T)
-// PARAM_ADD(PARAM_UINT8, right_en, &gemus.right.enabled)
-PARAM_ADD(PARAM_INT8, right_sign, &gemus.right.sign)
-PARAM_GROUP_STOP(gemus)
 
 /**
  * Log group for magnetometer.

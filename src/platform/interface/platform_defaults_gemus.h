@@ -23,8 +23,8 @@
 // Defines for default values in the bolt platform
 
 // Default values for battery limits
-#define DEFAULT_BAT_LOW_VOLTAGE                   7.4f   // Bicopter Specific 4S-Lipo
-#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          7.2f   // Bicopter Specific 4S-Lipo
+#define DEFAULT_BAT_LOW_VOLTAGE                   7.4f   // 2S-Lipo
+#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          7.2f   // 2S-Lipo
 
 #define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 8000
 #define SUPERVISOR_TUMBLE_CHECK_ENABLE false
