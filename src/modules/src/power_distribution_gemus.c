@@ -54,7 +54,7 @@ struct gemusConfig_s {
 
 struct gemusConfig_s gemusConfig = {
     .servo1 = {.trim=0, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
-    .servo2 = {.trim=0, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
+    .servo2 = {.trim=0, .sign=-1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
     .servo3 = {.trim=0, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
     .servo4 = {.trim=0, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200}
 };
