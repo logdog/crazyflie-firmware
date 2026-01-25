@@ -124,6 +124,7 @@ endif
 
 ifeq ($(CONFIG_PLATFORM_GEMUS),y)
 PLATFORM = gemus
+endif
 
 endif
 

@@ -61,6 +61,11 @@ config CONTROLLER_LQR
     bool "LQR controller"
     help
         Use the LQR controller as default
+
+config COTNROLLER_GEMUS
+    bool "Gemus Controller"
+    help 
+        Use the Gemus controller as default
 endchoice
 
 config CONTROLLER_OOT

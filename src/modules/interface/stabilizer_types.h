@@ -190,6 +190,7 @@ typedef enum control_mode_e {
   controlModeForce       = 2,
   controlModeWrench      = 3,
   controlModeLQR         = 4,
+  controlMode4Servos     = 5,
 } control_mode_t;
 
 typedef struct control_s {
@@ -242,6 +243,14 @@ typedef struct control_s {
       float motorRight_N;   // Right Motor Thrust (N) M4
       float servoLeft_deg;
       float servoRight_deg;
+    };
+
+    // controlMode4Servos
+    struct {
+      float servo1_deg;
+      float servo2_deg;
+      float servo3_deg;
+      float servo4_deg;
     };
 
   };

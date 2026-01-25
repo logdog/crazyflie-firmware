@@ -11,6 +11,7 @@
 #include "controller_passthrough.h"
 #include "controller_wrench.h"
 #include "controller_lqr.h"
+#include "controller_gemus.h"
 
 #include "autoconf.h"
 
@@ -41,6 +42,9 @@ static ControllerFcns controllerFunctions[] = {
   #endif
   #ifdef CONFIG_CONTROLLER_LQR
   {.init = controllerLQRFirmwareInit, .test = controllerLQRFirmwareTest, .update = controllerLQRFirmware, .name = "LQR"},
+  #endif
+  #ifdef CONFIG_CONTROLLER_GEMUS
+  {.init = controllerGemusFirmwareInit, .test = controllerGemusFirmwareTest, .update = controllerGemusFirmware, .name = "Gemus"},
   #endif
   #ifdef CONFIG_CONTROLLER_OOT
   {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
@@ -75,6 +79,8 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeWrench
   #elif defined (CONFIG_CONTROLLER_LQR)
     #define CONTROLLER ControllerTypeLQR
+  #elif defined (CONFIG_CONTROLLER_GEMUS)
+    #define CONTROLLER_ControllerTypeGemus
   #elif defined(CONFIG_CONTROLLER_OOT)
     #define CONTROLLER ControllerTypeOot
   #else

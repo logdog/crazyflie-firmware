@@ -44,6 +44,9 @@ typedef enum {
 #ifdef CONFIG_CONTROLLER_LQR
   ControllerTypeLQR,
 #endif
+#ifdef CONFIG_CONTROLLER_GEMUS
+  ControllerType4Servos,
+#endif
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif
