@@ -44,7 +44,7 @@ static ControllerFcns controllerFunctions[] = {
   {.init = controllerLQRFirmwareInit, .test = controllerLQRFirmwareTest, .update = controllerLQRFirmware, .name = "LQR"},
   #endif
   #ifdef CONFIG_CONTROLLER_GEMUS
-  {.init = controllerGemusFirmwareInit, .test = controllerGemusFirmwareTest, .update = controllerGemusFirmware, .name = "Gemus"},
+  {.init = controllerGemusInit, .test = controllerGemusTest, .update = controllerGemus, .name = "Gemus"},
   #endif
   #ifdef CONFIG_CONTROLLER_OOT
   {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
@@ -80,7 +80,7 @@ void controllerInit(ControllerType controller) {
   #elif defined (CONFIG_CONTROLLER_LQR)
     #define CONTROLLER ControllerTypeLQR
   #elif defined (CONFIG_CONTROLLER_GEMUS)
-    #define CONTROLLER_ControllerTypeGemus
+    #define CONTROLLER ControllerTypeGemus
   #elif defined(CONFIG_CONTROLLER_OOT)
     #define CONTROLLER ControllerTypeOot
   #else
