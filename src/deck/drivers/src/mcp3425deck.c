@@ -17,13 +17,12 @@
 #include "mcp3425deck.h"
 #include "i2c_drv.h"
 
-static uint8_t buffer[3];
 static bool init = false;
+static float adcVoltage = 1.6f;
 static float vbat2Voltage = 7.4f;
-static float voltageDividerRatio = 4.6f;
+static float voltageDividerRatio = 4.6f; // doesn't match voltage divider but gives correct results?
 
 void mcp3425DeckInit() {
-  DEBUG_PRINT("mcp3425Deck Init...\n");
   
   mcp3425Init(I2C1_DEV); // PB6 and PB7 i2c interface
 
@@ -37,16 +36,21 @@ void mcp3425DeckInit() {
       configMINIMAL_STACK_SIZE, NULL,
       /*priority*/2, NULL);
 
+  if (!mcp3425DeckTest()) {
+    DEBUG_PRINT("mcp3425Deck Init [FAIL]\n");
+    return;
+  }
+
   DEBUG_PRINT("mcp3425Deck Init [OK]\n");
   init = true;
 }
 
-static void mcp3425DeckTask(void* prm)
+void mcp3425DeckTask(void* prm)
 {
   TickType_t lastWakeTime = xTaskGetTickCount();
-
+  
   while(1) {
-    vTaskDelayUntil(&lastWakeTime, F2T(1000));
+    vTaskDelayUntil(&lastWakeTime, M2T(1000));
     readVoltage();
   }
 }
@@ -63,6 +67,8 @@ bool readVoltage() {
 
     // 10k and 36k voltage divider
     vbat2Voltage = adcMeasuredVoltage * voltageDividerRatio;
+    DEBUG_PRINT("adc voltage: %f, vbat2Voltage: %f\n", (double) adcMeasuredVoltage, (double) vbat2Voltage);
+
     return true;
 }
 
@@ -71,6 +77,7 @@ static const DeckDriver mcp3425_deck = {
   .vid = 0x00,
   .pid = 0x00,
   .name = "mcp3425Deck",
+  .usedPeriph = DECK_USING_I2C,
   .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_PA2 | DECK_USING_PA3,
   .init = mcp3425DeckInit,
   .test = mcp3425DeckTest,
@@ -83,5 +90,6 @@ PARAM_ADD(PARAM_FLOAT, vdiv, &voltageDividerRatio)
 PARAM_GROUP_STOP(mcp3425)
 
 LOG_GROUP_START(mcp3425)
+LOG_ADD(LOG_FLOAT, vadc, &adcVoltage)
 LOG_ADD(LOG_FLOAT, vbat2, &vbat2Voltage)
 LOG_GROUP_STOP(mcp3425)

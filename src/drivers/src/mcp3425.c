@@ -19,7 +19,7 @@
 
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
-static uint8_t buffer[3];
+static uint8_t buffer[4];
 static bool isInit;
 
 
@@ -47,36 +47,26 @@ bool mcp3425EnableContinuous12Bit() {
 // read the device (12-bit with LSB = 1 mV, assume positive voltage)
 bool mcp3425ReadVoltage(float *voltage) {
 
-    if (!i2cdevRead(I2Cx, devAddr, 3, buffer)){
-        return false;
-    }
-
-    uint16_t data = ((0x0F & buffer[0]) << 8) | buffer[1];
-    *voltage = data * 1000.0f;
-
+  uint8_t data[1] = {0x90};
+  if (i2cdevRead(I2Cx, devAddr, 4, buffer)) {
+    // DEBUG_PRINT("read voltage: buffer = %x %x %x %x\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+    uint16_t data = ((uint16_t) (0x0F & buffer[0]) << 8 ) | (uint16_t) buffer[1];
+    *voltage = data / 1000.0f;
     return true;
+  }
+  
+  return false;
 }
 
-// do a test read, and verify the configuration register
-// has the correct value stored in it
+// do a test read, see if we get the ACK from the i2c device
 bool mcp3425Test(void)
 {
-  bool testStatus;
-
   if (!isInit)
     return false;
 
-  testStatus = i2cdevRead(I2Cx, devAddr, 3, buffer);
-  if (!testStatus) {
-    DEBUG_PRINT("Error reading from mcp3425.\n");
-    return testStatus;
+  if (!i2cdevRead(I2Cx, devAddr, 4, buffer)) {
+    return false;
   }
 
-  testStatus &= (buffer[2] == 0x90);
-  if (!testStatus) {
-    DEBUG_PRINT("Invalid mcp3425 configuration. Expected 0x90, got %x.\n", buffer[2]);
-    return testStatus;
-  }
-
-  return testStatus;
+  return true;
 }

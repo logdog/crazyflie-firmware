@@ -7,6 +7,9 @@
 #include "deck_core.h"
 
 void mcp3425DeckInit();
-void mcp3425DeckTask(void* arg);
+void mcp3425DeckTask(void* prm);
+bool mcp3425DeckTest();
+
+bool readVoltage();
 
 #endif /* __MCP3425DECK_H__ */
