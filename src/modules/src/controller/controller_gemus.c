@@ -63,6 +63,15 @@ float calculateSchenatoAngle(float t, struct schenato_e s) {
 
 static bool enabled = true;
 
+struct controller_gemus_log_e {
+  float servo1_deg;
+  float servo2_deg;
+  float servo3_deg;
+  float servo4_deg;
+};
+
+static struct controller_gemus_log_e gemus_log;
+
 void controllerGemus(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
@@ -88,17 +97,28 @@ void controllerGemus(control_t *control, const setpoint_t *setpoint,
   control->servo1_deg = calculateSchenatoAngle(t, leftSchenatoProfile);
   control->servo2_deg = calculateSchenatoAngle(t, leftSchenatoProfile);
 
-//   if (stabilizerStep % 1000 == 0) {
-//     DEBUG_PRINT("setpoint->thrust: %f\n", (double) setpoint->thrust);
-//   }
+  // just for testing, so the same thing to servo3_deg and servo4_deg
+  control->servo3_deg = control->servo1_deg;
+  control->servo4_deg = control->servo1_deg;
+
+  // log variables
+  gemus_log.servo1_deg = control->servo1_deg;
+  gemus_log.servo2_deg = control->servo2_deg;
+  gemus_log.servo3_deg = control->servo3_deg;
+  gemus_log.servo4_deg = control->servo4_deg;
 }
 
 
-// LOG_GROUP_START(controller)
+LOG_GROUP_START(gemus)
 
-// LOG_GROUP_STOP(controller)
+LOG_ADD(LOG_FLOAT, servo1_deg, &gemus_log.servo1_deg)
+LOG_ADD(LOG_FLOAT, servo2_deg, &gemus_log.servo2_deg)
+LOG_ADD(LOG_FLOAT, servo3_deg, &gemus_log.servo3_deg)
+LOG_ADD(LOG_FLOAT, servo4_deg, &gemus_log.servo4_deg)
 
-PARAM_GROUP_START(controller)
+LOG_GROUP_STOP(gemus)
+
+PARAM_GROUP_START(gemus)
 
 PARAM_ADD(PARAM_FLOAT, A,       &leftSchenatoProfile.A)
 PARAM_ADD(PARAM_FLOAT, K,       &leftSchenatoProfile.K)
@@ -109,4 +129,4 @@ PARAM_ADD(PARAM_FLOAT, T,       &leftSchenatoProfile.T)
 // only used for testing
 PARAM_ADD(PARAM_1BYTE, enabled, &enabled)
 
-PARAM_GROUP_STOP(controller)
+PARAM_GROUP_STOP(gemus)
