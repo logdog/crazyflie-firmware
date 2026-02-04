@@ -39,6 +39,9 @@
 // landing timeout in ms
 #define LANDING_TIMEOUT_MS 10000
 
+// preflight timeout (1 minute)
+#define PREFLIGHT_TIMEOUT_MS 60000
+
 // Default PID gains
 #define PID_ROLL_RATE_KP  250.0
 #define PID_ROLL_RATE_KI  500.0

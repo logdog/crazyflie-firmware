@@ -13,15 +13,27 @@ struct schenato_e {
   float K;
   float rho;
   float gamma;
-  float T;
+};
+
+static struct schenato_e baseSchenatoProfile = {
+    .A = 1.0f,
+    .K = 29.0f,
+    .rho = 0.33,
+    .gamma = 10.0f
 };
 
 static struct schenato_e leftSchenatoProfile = {
     .A = 1.0f,
-    .K = 8.0f,
-    .rho = 0.25f,
-    .gamma = 0.1f,
-    .T = 1.0f,
+    .K = 29.0f,
+    .rho = 0.33,
+    .gamma = 10.0f
+};
+
+static struct schenato_e rightSchenatoProfile = {
+    .A = 1.0f,
+    .K = 29.0f,
+    .rho = 0.33,
+    .gamma = 10.0f
 };
 
 // static struct schenato_e rightSchenatoProfile = {
@@ -42,26 +54,25 @@ bool controllerGemusTest(void)
 }
 
 // time_s is the time in seconds
-float calculateNormalizedTime(float time_s, struct schenato_e s) {
-    return s.T * (time_s / (s.T) - (float) floor(time_s / (s.T)));
-}
+// float calculateNormalizedTime(float time_s, struct schenato_e s) {
+//     return s.T * (time_s / (s.T) - (float) floor(time_s / (s.T)));
+// }
 
 // t is the normalized time [0,1)
+// see Taha, 2012 Review of Flapping Wing Vehicle with T = 1
 float calculateSchenatoAngle(float t, struct schenato_e s) {
     
     float angle;
 
-    if (0 <= t && t <= s.rho * s.T) {
-        angle = s.A * (1 + s.K) * (1 - 2.0f*t/(s.rho*s.T)) + s.gamma*s.A;
+    if (0 <= t && t <= s.rho) {
+        angle = s.A * (1 + s.K) * (1 - 2.0f*t/s.rho) + s.gamma * s.A;
     }
     else {
-        angle = s.A * (1 + s.K) * (2.0f*(t - s.rho * s.T)/((1 - s.rho)*s.T) - 1) + s.gamma * s.A;
+        angle = s.A * (1 + s.K) * (2.0f*(t - s.rho)/(1 - s.rho) - 1) + s.gamma * s.A;
     }
 
     return angle;
 }
-
-static bool enabled = true;
 
 struct controller_gemus_log_e {
   float servo1_deg;
@@ -72,6 +83,9 @@ struct controller_gemus_log_e {
 
 static struct controller_gemus_log_e gemus_log;
 
+static float t = 0.0f; // normalized time
+static float T = 1.0f; // flapping period
+
 void controllerGemus(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
@@ -79,27 +93,40 @@ void controllerGemus(control_t *control, const setpoint_t *setpoint,
 {
   control->controlMode = controlMode4Servos;
 
-  // give user the option to disable controller via a parameter update.
-  // This is a convenience feature for when testing on static stand.
-  if (!enabled) {
-    return;
+  // setpoint->thrust
+  // thrust = 0 --> minimum flapping Hz
+  // thrust = 60000 --> maximum flapping Hz
+  float frequency = 1.0f + 1.0f * (setpoint->thrust / 60000.0f);
+
+  // put some safety bounds on the frequency
+  if (frequency > 2.0f) {
+    frequency = 2.0f;
+  }
+  else if (frequency < 1.0f) {
+    frequency = 1.0f;
   }
 
-//   control->thrust = setpoint->thrust / 65000.0f; // normalized 0 to 1
-//   control->roll = setpoint->attitude.roll;
-//   control->pitch = setpoint->attitude.pitch;
+  T = 1.0f/frequency;
 
-  // time_s is the time in seconds
-  // t is the normalized time [0,1) in the flapping period [0,T)
-  float time_s = (float) stabilizerStep / 1000.0f;
-  float t = calculateNormalizedTime(time_s, leftSchenatoProfile);
+  t += 1 / (T * 1000.0f);
+  while (t >= 1.0f) {
+    t -= 1.0f;
+  }
 
-  control->servo1_deg = calculateSchenatoAngle(t, leftSchenatoProfile);
-  control->servo2_deg = calculateSchenatoAngle(t, leftSchenatoProfile);
+  leftSchenatoProfile = baseSchenatoProfile;
+  rightSchenatoProfile = baseSchenatoProfile;
+
+  // differential flapping angle: use roll command to make turns
+  // roll command is -30 to -30 --> need to map to multiplier of 0.9 to 1.1
+  leftSchenatoProfile.A = baseSchenatoProfile.A * (1.0f + 0.2f*setpoint->attitude.roll/30.0f);
+  rightSchenatoProfile.A = baseSchenatoProfile.A * (1.0f - 0.2f*setpoint->attitude.roll/30.0f);
+
+  control->servo1_deg = calculateSchenatoAngle(t, leftSchenatoProfile); // t is normalized time
+  control->servo2_deg = calculateSchenatoAngle(t, rightSchenatoProfile);
 
   // just for testing, so the same thing to servo3_deg and servo4_deg
-  control->servo3_deg = control->servo1_deg;
-  control->servo4_deg = control->servo1_deg;
+  control->servo3_deg = setpoint->attitude.pitch;
+  control->servo4_deg = setpoint->attitude.pitch;
 
   // log variables
   gemus_log.servo1_deg = control->servo1_deg;
@@ -120,13 +147,10 @@ LOG_GROUP_STOP(gemus)
 
 PARAM_GROUP_START(gemus)
 
-PARAM_ADD(PARAM_FLOAT, A,       &leftSchenatoProfile.A)
-PARAM_ADD(PARAM_FLOAT, K,       &leftSchenatoProfile.K)
-PARAM_ADD(PARAM_FLOAT, rho,     &leftSchenatoProfile.rho)
-PARAM_ADD(PARAM_FLOAT, gamma,   &leftSchenatoProfile.gamma)
-PARAM_ADD(PARAM_FLOAT, T,       &leftSchenatoProfile.T)
-
-// only used for testing
-PARAM_ADD(PARAM_1BYTE, enabled, &enabled)
+PARAM_ADD(PARAM_FLOAT, A,       &baseSchenatoProfile.A)
+PARAM_ADD(PARAM_FLOAT, K,       &baseSchenatoProfile.K)
+PARAM_ADD(PARAM_FLOAT, rho,     &baseSchenatoProfile.rho)
+PARAM_ADD(PARAM_FLOAT, gamma,   &baseSchenatoProfile.gamma)
+PARAM_ADD(PARAM_FLOAT, T,       &T)
 
 PARAM_GROUP_STOP(gemus)
