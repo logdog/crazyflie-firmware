@@ -98,10 +98,6 @@ void controllerOutOfTree(control_t *control, const setpoint_t *setpoint, const s
   // Implement your controller here...
   control->controlMode = controlModeBeat;
 
-  if (tick % 1000 == 0)
-    DEBUG_PRINT("hello from OOT %d\n", tick);
-
-  
   t += dt / T;
   while (t >= 1.0f) {
     t -= 1.0f;

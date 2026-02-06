@@ -26,7 +26,7 @@
 #define DEFAULT_BAT_LOW_VOLTAGE                   14.8f   // Bicopter Specific 4S-Lipo
 #define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          14.4f   // Bicopter Specific 4S-Lipo
 
-#define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 0
+#define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 4000
 #define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
 // the remainder of the file is unchanged from the bolt defaults
