@@ -136,12 +136,14 @@
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 #endif
 
-#define NBR_OF_MOTORS 4
+#define NBR_OF_MOTORS 6
 // Motors IDs define
-#define MOTOR_M1  0
-#define MOTOR_M2  1
-#define MOTOR_M3  2
-#define MOTOR_M4  3
+#define MOTOR_S1  0
+#define MOTOR_S2  1
+#define MOTOR_S3  2
+#define MOTOR_S4  3
+#define MOTOR_M1  4
+#define MOTOR_M4  5
 
 // Test defines
 #define MOTORS_TEST_RATIO         (uint16_t)(0.2*(1<<16))
@@ -254,16 +256,17 @@ typedef struct {
 /**
  * Motor mapping configurations
  */
-extern const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS];
-extern const MotorPerifDef* motorMapGemus[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS];
+// extern const MotorPerifDef* motorMapGemus[NBR_OF_MOTORS];
+extern const MotorPerifDef* motorMapBeat[6];
 
 /**
  * Test sound tones

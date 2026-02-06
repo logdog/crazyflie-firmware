@@ -5,6 +5,7 @@ obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-$(CONFIG_PLATFORM_FLAPPER) += platform_flapper.o
 obj-$(CONFIG_PLATFORM_BICOPTER) += platform_bicopter.o
 obj-$(CONFIG_PLATFORM_GEMUS) += platform_gemus.o
+obj-$(CONFIG_PLATFORM_BEAT) += platform_beat.o
 obj-y += platform.o
 obj-y += platform_stm32f4.o
 obj-y += platform_utils.o

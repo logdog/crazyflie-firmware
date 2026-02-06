@@ -182,7 +182,7 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
 } state_t;
 
-#define STABILIZER_NR_OF_MOTORS 4
+#define STABILIZER_NR_OF_MOTORS 6
 
 typedef enum control_mode_e {
   controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
@@ -191,6 +191,7 @@ typedef enum control_mode_e {
   controlModeWrench      = 3,
   controlModeLQR         = 4,
   controlMode4Servos     = 5,
+  controlModeBeat        = 6,
 } control_mode_t;
 
 typedef struct control_s {
@@ -252,6 +253,15 @@ typedef struct control_s {
       float servo3_deg;
       float servo4_deg;
     };
+    // controlModeBeat
+    struct {
+      float phiLeft_deg;
+      float phiRight_deg;
+      float psiLeft_deg;
+      float psiRight_deg;
+      float thrustLeft_N;
+      float thrustRight_N;
+    };
 
   };
 
@@ -261,9 +271,11 @@ typedef struct control_s {
 typedef union {
   int32_t list[STABILIZER_NR_OF_MOTORS];
   struct {
+    int32_t s1;
+    int32_t s2;
+    int32_t s3;
+    int32_t s4;
     int32_t m1;
-    int32_t m2;
-    int32_t m3;
     int32_t m4;
   } motors;
 } motors_thrust_uncapped_t;
@@ -271,9 +283,11 @@ typedef union {
 typedef union {
   uint16_t list[STABILIZER_NR_OF_MOTORS];
   struct {
+    uint16_t s1;
+    uint16_t s2;
+    uint16_t s3;
+    uint16_t s4;
     uint16_t m1;  // PWM ratio
-    uint16_t m2;  // PWM ratio
-    uint16_t m3;  // PWM ratio
     uint16_t m4;  // PWM ratio
   } motors;
 } motors_thrust_pwm_t;

@@ -120,6 +120,10 @@ ifeq ($(CONFIG_PLATFORM_GEMUS),y)
 PLATFORM = gemus
 endif
 
+ifeq ($(CONFIG_PLATFORM_BEAT),y)
+PLATFORM = beat
+endif
+
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
 

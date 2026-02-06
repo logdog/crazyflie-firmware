@@ -226,6 +226,11 @@ config POWER_DISTRIBUTION_GEMUS
     depends on PLATFORM_GEMUS
     help
         Power distribution function for Gemus
+config POWER_DISTRIBUTION_BEAT
+    bool "Beat power distribution"
+    depends on PLATFORM_BEAT
+    help
+        Power distribution function for Beat
 endchoice
 config POWER_DISTRIBUTION_FLAPPER_REVB
     bool "Flapper  Nimble+ power distribution (PCB revision B)"

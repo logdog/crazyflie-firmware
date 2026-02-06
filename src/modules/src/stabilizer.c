@@ -219,9 +219,11 @@ static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncap
 static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
 {
   motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
-  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
-  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
+  motorsSetRatio(MOTOR_S1, motorPwm->motors.s1);
+  motorsSetRatio(MOTOR_S2, motorPwm->motors.s2);
+  motorsSetRatio(MOTOR_S3, motorPwm->motors.s3);
+  motorsSetRatio(MOTOR_S4, motorPwm->motors.s4);
 }
 
 static void updateStateEstimatorAndControllerTypes() {
@@ -868,17 +870,23 @@ LOG_ADD(LOG_INT32, m1req, &motorThrustBatCompUncapped.motors.m1)
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
+// LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
-LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
+// LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
 
 /**
  * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
  * and may have values outside the [0 - UINT16_MAX] range.
  */
 LOG_ADD(LOG_INT32, m4req, &motorThrustBatCompUncapped.motors.m4)
+
+LOG_ADD(LOG_INT32, s1req, &motorThrustBatCompUncapped.motors.s1)
+LOG_ADD(LOG_INT32, s2req, &motorThrustBatCompUncapped.motors.s2)
+LOG_ADD(LOG_INT32, s3req, &motorThrustBatCompUncapped.motors.s3)
+LOG_ADD(LOG_INT32, s4req, &motorThrustBatCompUncapped.motors.m4)
+
 LOG_GROUP_STOP(motor)

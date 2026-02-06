@@ -52,6 +52,9 @@
 #ifdef CONFIG_PLATFORM_GEMUS
     #include "platform_defaults_gemus.h"
 #endif
+#ifdef CONFIG_PLATFORM_BEAT
+    #include "platform_defaults_beat.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform

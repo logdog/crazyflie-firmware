@@ -703,101 +703,6 @@ static const MotorPerifDef MOTORS_PA7_TIM14_CH1_BRUSHLESS_OD =
 };
 
 /**
- * Mapping for Tags that don't have motors.
- * Actually same mapping as for CF2 but the pins are not physically connected.
- */
-const MotorPerifDef* motorMapNoMotors[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHED,
-  &MOTORS_PB11_TIM2_CH4_BRUSHED,
-  &MOTORS_PA15_TIM2_CH1_BRUSHED,
-  &MOTORS_PB9_TIM4_CH4_BRUSHED
-};
-
-/**
- * Default brushed mapping to M1-M4 connectors.
- */
-const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHED,
-  &MOTORS_PB11_TIM2_CH4_BRUSHED,
-  &MOTORS_PA15_TIM2_CH1_BRUSHED,
-  &MOTORS_PB9_TIM4_CH4_BRUSHED
-};
-
-/**
- * Brushless motors mapped as on the Big-Quad deck
- * M1 -> TX2
- * M2 -> IO3
- * M3 -> IO2
- * M4 -> RX2
- */
-const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA2_TIM2_CH3_BRUSHLESS_OD,
-  &MOTORS_PB4_TIM3_CH1_BRUSHLESS_OD,
-  &MOTORS_PB5_TIM3_CH2_BRUSHLESS_OD,
-  &MOTORS_PA3_TIM2_CH4_BRUSHLESS_OD
-};
-
-/**
- * Brushless motors mapped to the standard motor connectors with pull-ups (~1K) to VBAT soldered.
- */
-const MotorPerifDef* motorMapDefaltConBrushless[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP,
-  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_INV_PP,
-  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_INV_PP,
-  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_INV_PP
-};
-
-/**
- * Brushless motors mapped to the Bolt PWM outputs.
- */
-const MotorPerifDef* motorMapBoltBrushless[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,
-  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
-  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
-  &MOTORS_PB9_TIM4_CH4_BRUSHLESS_PP
-};
-
-/**
- * Brushless motors mapped to the Bolt 1.1 PWM outputs.
- */
-const MotorPerifDef* motorMapBolt11Brushless[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,
-  &MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP,
-  &MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP,
-  &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP
-};
-
-/**
- * Brushed motors mapped to the Bolt 1.1 PWM outputs.
- * 0R resistors 0402 should be mounted at R19, R22, R33, R34 and
- * motor override signals will be disabled (high impedance).
- */
-const MotorPerifDef* motorMapBolt11Brushed[NBR_OF_MOTORS] =
-{
-  &MOTORS_PA1_TIM2_CH2_BRUSHED,
-  &MOTORS_PB11_TIM2_CH4_BRUSHED,
-  &MOTORS_PA15_TIM2_CH1_BRUSHED,
-  &MOTORS_PB10_TIM2_CH3_BRUSHED
-};
-
-/**
- * Brushless motors mapped to the Bolt Rev.F PWM outputs.
- */
-const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS] =
-{
-    &MOTORS_PA1_TIM2_CH2_BRUSHLESS_OD,
-    &MOTORS_PB11_TIM2_CH4_BRUSHLESS_OD,
-    &MOTORS_PA15_TIM2_CH1_BRUSHLESS_OD,
-    &MOTORS_PB10_TIM2_CH3_BRUSHLESS_OD
-};
-
-/**
  * Servo mapped to the Bigquad CPPM (MOSI) port
  */
 const MotorPerifDef* servoMapMOSI = &MOTORS_PA7_TIM14_CH1_BRUSHLESS_OD;
@@ -917,28 +822,12 @@ static const MotorPerifDef MOTORS_PA2_TIM5_CH3_SERVO =
     .preloadConfig = TIM_OC3PreloadConfig,
 };
 
-/**
- * Bicopter motor configuration using IO1 and IO2 for servos
- * M1 -> Standard motor connector M1 (PA1, TIM2_CH2) - Left motor  
- * M2 -> IO1 pin (PB8, TIM4_CH3) - Left servo with servo PWM timing
- * M3 -> IO2 pin (PB5, TIM3_CH2) - Right servo with servo PWM timing
- * M4 -> Standard motor connector M4 (PB9, TIM4_CH4) - Right motor
- */
-const MotorPerifDef* motorMapBicopterBrushless[NBR_OF_MOTORS] =
+const MotorPerifDef* motorMapBeat[NBR_OF_MOTORS] = 
 {
-  &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,    // M1 - Left motor (standard)
-  &MOTORS_PB8_TIM4_CH3_SERVO,           // M2 - Left servo (IO1 with servo PWM)
-  &MOTORS_PB5_TIM3_CH2_SERVO,           // M3 - Right servo (IO2 with servo PWM)
-  &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP // M4 - Right motor (standard)
-};
-
-/**
- * Gemus motor configuration using four servos
- */
-const MotorPerifDef* motorMapGemus[NBR_OF_MOTORS] =
-{
-  &MOTORS_PB8_TIM4_CH3_SERVO,    // M1 - IO1
-  &MOTORS_PB5_TIM3_CH2_SERVO,    // M2 - IO2
-  &MOTORS_PA3_TIM5_CH4_SERVO,    // M3 - TX2 
-  &MOTORS_PA2_TIM5_CH3_SERVO     // M4 - RX2
+    &MOTORS_PB8_TIM4_CH3_SERVO,    // S1 - IO1
+    &MOTORS_PB5_TIM3_CH2_SERVO,    // S2 - IO2
+    &MOTORS_PA2_TIM5_CH3_SERVO,    // S4 - RX2
+    &MOTORS_PA3_TIM5_CH4_SERVO,    // S3 - TX2 
+    &MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP,    // M1 - Left motor (standard)
+    &MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP    // M4 - Right motor (standard)
 };

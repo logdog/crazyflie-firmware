@@ -155,8 +155,8 @@ void healthRunTests(sensorData_t *sensors)
     testState = measureNoiseFloor;
     minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
     minSingleLoadedVoltage[MOTOR_M1] = minLoadedVoltage;
-    minSingleLoadedVoltage[MOTOR_M2] = minLoadedVoltage;
-    minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
+    // minSingleLoadedVoltage[MOTOR_M2] = minLoadedVoltage;
+    // minSingleLoadedVoltage[MOTOR_M3] = minLoadedVoltage;
     minSingleLoadedVoltage[MOTOR_M4] = minLoadedVoltage;
     // Make sure motors are stopped first.
     motorsStop();
@@ -241,8 +241,8 @@ void healthRunTests(sensorData_t *sensors)
     if (tick == 1)
     {
       motorsSetRatio(MOTOR_M1, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-      motorsSetRatio(MOTOR_M2, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-      motorsSetRatio(MOTOR_M3, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
+      // motorsSetRatio(MOTOR_M2, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
+      // motorsSetRatio(MOTOR_M3, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
       motorsSetRatio(MOTOR_M4, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
     }
     else if (tick < 50)
