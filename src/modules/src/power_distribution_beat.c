@@ -55,10 +55,10 @@ struct beatConfig_s {
 };
 
 struct beatConfig_s beatConfig = {
-    .servo1 = {.trim=-125, .sign=-1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
-    .servo2 = {.trim=-90, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
-    .servo3 = {.trim=90, .sign=1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
-    .servo4 = {.trim=60, .sign=-1, .usPerDeg=11.11f, .min_us=800, .max_us=2200},
+    .servo1 = {.trim=-100, .sign=-1, .usPerDeg=10.00f, .min_us=1000, .max_us=2000}, // avoid colliding propellers
+    .servo2 = {.trim=-90, .sign=1, .usPerDeg=10.00f, .min_us=800, .max_us=2200},
+    .servo3 = {.trim=80, .sign=1, .usPerDeg=10.00f, .min_us=1000, .max_us=2000},  // avoid colliding propellers
+    .servo4 = {.trim=60, .sign=-1, .usPerDeg=10.00f, .min_us=800, .max_us=2200},
     .bldc1  = {.pwmToThrustA = 0.05163731f, .pwmToThrustB = 0.32107592f, .trim=1.0f},
     .bldc2  = {.pwmToThrustA = 0.05163731f, .pwmToThrustB = 0.32107592f, .trim=1.0f}
 };
@@ -154,17 +154,8 @@ static void powerDistributionBeat(const control_t *control, motors_thrust_uncapp
     motorThrustUncapped->motors.s3 = degToMicroseconds(&beatConfig.servo3, control->phiRight_deg);
     motorThrustUncapped->motors.s4 = degToMicroseconds(&beatConfig.servo4, control->psiRight_deg);
 
-    motorThrustUncapped->motors.m1 = motorThrustToDSHOT(&beatConfig.bldc1, control->thrustLeft_N);
-    motorThrustUncapped->motors.m4 = motorThrustToDSHOT(&beatConfig.bldc2, control->thrustRight_N);
-
-    // motorThrustUncapped->motors.s3 = 1700;
-
-    if (counter++ % 250 == 0) {
-        DEBUG_PRINT("servos: %d, %d, %d, %d\n", motorThrustUncapped->motors.s1, 
-            motorThrustUncapped->motors.s2,
-            motorThrustUncapped->motors.s3,
-            motorThrustUncapped->motors.s4);
-    }
+    motorThrustUncapped->motors.m4 = motorThrustToDSHOT(&beatConfig.bldc1, control->thrustLeft_N);
+    motorThrustUncapped->motors.m1 = motorThrustToDSHOT(&beatConfig.bldc2, control->thrustRight_N);
 }
 
 

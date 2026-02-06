@@ -119,6 +119,6 @@ void controllerOutOfTree(control_t *control, const setpoint_t *setpoint, const s
     control->psiRight_deg = 45.0f;
   }
 
-  control->thrustLeft_N = 0.5f;
-  control->thrustRight_N = 0.5f;
+  control->thrustLeft_N = 0.0f;
+  control->thrustRight_N = 0.0f;
 }
