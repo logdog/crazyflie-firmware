@@ -316,7 +316,7 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
-  // int32_t count = 0;
+  int32_t count = 0;
 
   systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
@@ -380,33 +380,45 @@ static void stabilizerTask(void* param)
         motorsStop();
       }
 
-      // // maximum thrust test
-      // if (areMotorsAllowedToRun) {
-      //   // if (count == 0) DEBUG_PRINT("motors are allowed to run\n");
-      //   control.motorLeft_N = 0.0f;
-      //   control.motorRight_N = 0.0f;
-      //   control.servoLeft_deg = 0;
-      //   control.servoRight_deg = 0;
+      // maximum thrust test
+      /*if (areMotorsAllowedToRun) {
 
-      //   control.controlMode = controlModeLQR;
-      //   powerDistribution(&control, &motorThrustUncapped);
-      //   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-      //   const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-      //   logCapWarning(isCapped);
+        control.controlMode = controlModeLQR;
+        control.motorLeft_N = 0.0f;
+        control.motorRight_N = 0.0f;
+        control.servoLeft_deg = 0;
+        control.servoRight_deg = 0;
 
-      //   // pulse the motors twice
-      //   if ((count >= 0 && count < 10000))  {
-      //     motorPwm.motors.m1 = 65000;
-      //     motorPwm.motors.m4 = 65000;
-      //   }
-      //   count++;
+        if (count < 10000) {
 
-      //   setMotorRatios(&motorPwm);
-      // }
-      // else {
-      //   motorsStop();
-      //   count = 0;
-      // }
+          float sin2pift = (float) sin(2*PI*6*count/1000.0f);
+          // float sin2pift = (float) sin(2.0f*PI*count/1000.0f);
+          // float force = 1.1f*0.6f*9.81f* sin2pift * sin2pift; // k sin^2
+          float force = 6.5;// * sin2pift * sin2pift;
+
+          control.motorLeft_N = force;
+          control.motorRight_N =  force;
+        }
+
+
+        powerDistribution(&control, &motorThrustUncapped);
+        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
+        const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
+        logCapWarning(isCapped);
+        setMotorRatios(&motorPwm);
+
+
+        if (count % 70 == 1) 
+            DEBUG_PRINT("Motor Thrust: %f (N), PWM: %d, Count: %d\n", control.motorLeft_N, motorPwm.motors.m1, count);
+
+        count++;
+        
+      }
+      else {
+        motorsStop();
+        count = 0;
+      }
+      */
 
       // Compute compressed log formats
       compressState();

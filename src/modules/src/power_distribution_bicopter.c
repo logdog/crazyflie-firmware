@@ -195,8 +195,8 @@ static void powerDistributionLQR(const control_t *control, motors_thrust_uncappe
     float m1_force = control->motorRight_N * bicopterConfig.rightMotorTrim;
     float m4_force = control->motorLeft_N * bicopterConfig.leftMotorTrim;
     
-    motorThrustUncapped->motors.m1 = motorThrustToDSHOT(m1_force); // left motor
-    motorThrustUncapped->motors.m4 = motorThrustToDSHOT(m4_force); // right motor
+    motorThrustUncapped->motors.m1 = motorThrustToDSHOT(m1_force); // TODO: ensure this is correct value
+    motorThrustUncapped->motors.m4 = motorThrustToDSHOT(m4_force);
 
     // left and right servos
     motorThrustUncapped->motors.m2 = leftServoDegToMicroseconds(control->servoLeft_deg);
@@ -249,8 +249,11 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     bool isCapped = false;
 
     // Motors M1 and M4
-    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, maxThrust, &isCapped);
-    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, maxThrust, &isCapped);
+    // motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, maxThrust, &isCapped);
+    // motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, maxThrust, &isCapped);
+    // 
+    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, 0, maxThrust, &isCapped);
+    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, 0, maxThrust, &isCapped);
     
     // Servos M2 and M3 (limit servo range)
     motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, leftServoDegToMicroseconds(-maxServoAngle), leftServoDegToMicroseconds(maxServoAngle), &isCapped);

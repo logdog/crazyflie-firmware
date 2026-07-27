@@ -104,18 +104,34 @@ struct flappingConfig_s {
     } state;
     float hz;
     float amplitudeDeg;
+    // also add the ability to write a series of hz, amplitudes
+    float hz2;
+    float amplitudeDeg2;
+    float hz3;
+    float amplitudeDeg3;
 };
 
+// this is only used for creating table 3, 
+// where we need to transition between amplitudes
+// during one continuous flapping motion
 struct flappingConfig_s flappingConfig1 = {
   .state = disabled,
   .hz = 5,
   .amplitudeDeg = 20,
+  .hz2 = 0,
+  .amplitudeDeg2 = 0,
+  .hz3 = 0,
+  .amplitudeDeg3 = 0
 };
 
 struct flappingConfig_s flappingConfig2 = {
   .state = disabled,
   .hz = 5,
   .amplitudeDeg = 20,
+  .hz2 = 0,
+  .amplitudeDeg2 = 0,
+  .hz3 = 0,
+  .amplitudeDeg3 = 0
 };
 
 // 1/J_0(a*pi/180) where J_0 is the 0th order Bessel function of the first kind
@@ -381,9 +397,11 @@ float controlHelper(controllerLQR_t* self, control_t *control, const setpoint_t 
   float flappingAngleOffsetDeg = 0.0f;
   float thrustOffsetN = self->mass * 9.81f / 2.0f;
   if (flapConfig->state == enabled) {
-    flappingAngleOffsetDeg = flapConfig->amplitudeDeg * sinf(2*(float)M_PI*flapConfig->hz*tick/1000.0f);
-    int beta = betaLUT(flapConfig->hz, flapConfig->amplitudeDeg);
-    thrustOffsetN = (self->mass * 9.81f / 2.0f) * besselMultiplier[beta]; // comment out this line to set Phi = 0
+    flappingAngleOffsetDeg = flapConfig->amplitudeDeg * sinf(2*(float)M_PI*flapConfig->hz*tick/1000.0f) +
+                             flapConfig->amplitudeDeg2 * sinf(2*(float)M_PI*flapConfig->hz2*tick/1000.0f) + 
+                             flapConfig->amplitudeDeg3 * sinf(2*(float)M_PI*flapConfig->hz3*tick/1000.0f);
+    // int beta = betaLUT(flapConfig->hz, flapConfig->amplitudeDeg);
+    // thrustOffsetN = (self->mass * 9.81f / 2.0f) * besselMultiplier[beta]; // comment out this line to set Phi = 0
   }
 
   // current state
@@ -460,6 +478,7 @@ enum LQRControllerState_t {
   flapping
 } lqrControllerState;
 
+// TODO: check if uncommenting TABLE3 results in the bicopter flying properly
 // #define TABLE3
 
 void controllerLQR(controllerLQR_t* self, control_t *control, const setpoint_t *setpoint,
@@ -772,5 +791,9 @@ LOG_GROUP_STOP(ctrlLQR)
 PARAM_GROUP_START(ctrlLQR)
 PARAM_ADD(PARAM_UINT8, flap_mode, &lqrControllerState)
 PARAM_ADD(PARAM_FLOAT, flap_hz, &flappingConfig2.hz)
+PARAM_ADD(PARAM_FLOAT, flap_hz2, &flappingConfig2.hz2)
+PARAM_ADD(PARAM_FLOAT, flap_hz3, &flappingConfig2.hz3)
 PARAM_ADD(PARAM_FLOAT, flap_a, &flappingConfig2.amplitudeDeg)
+PARAM_ADD(PARAM_FLOAT, flap_a2, &flappingConfig2.amplitudeDeg2)
+PARAM_ADD(PARAM_FLOAT, flap_a3, &flappingConfig2.amplitudeDeg3)
 PARAM_GROUP_STOP(ctrlLQR)

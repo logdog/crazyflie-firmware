@@ -26,6 +26,9 @@
 #define DEFAULT_BAT_LOW_VOLTAGE                   14.8f   // Bicopter Specific 4S-Lipo
 #define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE          14.4f   // Bicopter Specific 4S-Lipo
 
+// #define DEFAULT_BAT_LOW_VOLTAGE 7.6f
+// #define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE 7.4f
+
 #define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 8000
 #define SUPERVISOR_TUMBLE_CHECK_ENABLE false
 
