@@ -147,7 +147,6 @@ static uint32_t motorThrustToDSHOT(struct bldcConfig_s *bldc, float motorThrust_
 }
 
 
-static int counter = 0;
 static void powerDistributionBeat(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
     motorThrustUncapped->motors.s1 = degToMicroseconds(&beatConfig.servo1, control->phiLeft_deg);
     motorThrustUncapped->motors.s2 = degToMicroseconds(&beatConfig.servo2, control->psiLeft_deg);
@@ -163,6 +162,18 @@ static void powerDistributionBeat(const control_t *control, motors_thrust_uncapp
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   switch (control->controlMode) {
+    case controlModeLQR:
+
+        // change to the control mode that we can understand
+        control_t control_t_beat;
+        control_t_beat.phiLeft_deg = 0;
+        control_t_beat.psiLeft_deg = control->servoLeft_deg;
+        control_t_beat.phiRight_deg = 0;
+        control_t_beat.psiRight_deg = control->servoRight_deg;
+        control_t_beat.thrustLeft_N = control->motorLeft_N;
+        control_t_beat.thrustRight_N = control->motorRight_N;
+        powerDistributionBeat(&control_t_beat, motorThrustUncapped);
+        break;
     case controlModeBeat:
         powerDistributionBeat(control, motorThrustUncapped);
         break;
