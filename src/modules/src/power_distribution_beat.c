@@ -74,6 +74,7 @@ struct beatConfig_s beatConfig = {
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 static uint16_t maxThrust = UINT16_MAX;
+static uint8_t enableServos = 1;
 
 // calcualte the pulse length in microseconds
 uint16_t degToMicroseconds(struct servoConfig_s * servo, float deg) {
@@ -87,22 +88,25 @@ int powerDistributionMotorType(uint32_t id)
 
 uint16_t powerDistributionStopRatio(uint32_t id)
 {
-    uint16_t stopValue;
+    uint16_t stopValue = 0;
 
     if (powerDistributionMotorType(id) == 0){
         stopValue = zeroPosition_us;
         // servo motor
-        switch (id) {
-            case 0:  stopValue = degToMicroseconds(&beatConfig.servo1, 0.0f); break;
-            case 1:  stopValue = degToMicroseconds(&beatConfig.servo2, 0.0f); break;
-            case 2:  stopValue = degToMicroseconds(&beatConfig.servo3, 0.0f); break;
-            case 3:  stopValue = degToMicroseconds(&beatConfig.servo4, 0.0f); break;
-            default: break;
+
+        if (enableServos) {
+            switch (id) {
+                case 0:  stopValue = degToMicroseconds(&beatConfig.servo1, 0.0f); break;
+                case 1:  stopValue = degToMicroseconds(&beatConfig.servo2, 0.0f); break;
+                case 2:  stopValue = degToMicroseconds(&beatConfig.servo3, 0.0f); break;
+                case 3:  stopValue = degToMicroseconds(&beatConfig.servo4, 0.0f); break;
+                default: break;
+            }
         }
-    }
-    else {
-        // brushless motor
-        stopValue = 0;
+        else {
+            // disable the servo motors
+            motorsDisableServos();
+        }
     }
     
     return stopValue;
@@ -204,6 +208,7 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, maxThrust, &isCapped);
     motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, maxThrust, &isCapped);
 
+
     motorPwm->motors.s1 = limitThrust(motorThrustBatCompUncapped->motors.s1, beatConfig.servo1.min_us, beatConfig.servo1.max_us, &isCapped);
     motorPwm->motors.s2 = limitThrust(motorThrustBatCompUncapped->motors.s2, beatConfig.servo2.min_us, beatConfig.servo2.max_us, &isCapped);
     motorPwm->motors.s3 = limitThrust(motorThrustBatCompUncapped->motors.s3, beatConfig.servo3.min_us, beatConfig.servo3.max_us, &isCapped);
@@ -264,5 +269,7 @@ PARAM_ADD(PARAM_INT8,  servo4sign, &beatConfig.servo4.sign)
 
 PARAM_ADD(PARAM_FLOAT, bldc1trim, &beatConfig.bldc1.trim)
 PARAM_ADD(PARAM_FLOAT, bldc2trim, &beatConfig.bldc2.trim)
+
+PARAM_ADD(PARAM_UINT8, enable, &enableServos)
 
 PARAM_GROUP_STOP(powerDist)

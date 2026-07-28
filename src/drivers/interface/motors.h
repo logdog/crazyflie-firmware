@@ -299,6 +299,9 @@ void motorsStop();
  */
 void motorsEnablePWM(void);
 
+void motorsEnableServos(void);
+void motorsDisableServos(void);
+
 /**
  * Disable PWM output for all motors
  */

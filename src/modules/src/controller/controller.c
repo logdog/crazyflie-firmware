@@ -8,10 +8,22 @@
 #include "controller_indi.h"
 #include "controller_brescianini.h"
 #include "controller_lee.h"
+
+#ifdef CONFIG_CONTROLLER_PASSTHROUGH
 #include "controller_passthrough.h"
+#endif
+
+#ifdef CONFIG_CONTROLLER_WRENCH
 #include "controller_wrench.h"
+#endif
+
+#ifdef CONFIG_CONTROLLER_LQR
 #include "controller_lqr.h"
+#endif
+
+#ifdef CONFIG_CONTROLLER_GEMUS
 #include "controller_gemus.h"
+#endif
 
 #include "autoconf.h"
 

@@ -444,6 +444,20 @@ void motorsDisablePWM(void)
   }
 }
 
+void motorsEnableServos(void) {
+  for (int i = 2; i < NBR_OF_MOTORS; i++)
+  {
+    TIM_CtrlPWMOutputs(motorMap[i]->tim, ENABLE);
+  }
+}
+
+void motorsDisableServos(void) {
+  for (int i = 2; i < NBR_OF_MOTORS; i++)
+  {
+    TIM_CtrlPWMOutputs(motorMap[i]->tim, DISABLE);
+  }
+}
+
 void motorsEnablePassthough(uint32_t id)
 {
   ASSERT(id < NBR_OF_MOTORS);
